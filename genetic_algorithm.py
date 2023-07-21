@@ -1,7 +1,6 @@
-#Foram criadas outras duas funções para melhores a organização do código, print_current_best_individual
-#e print_best_individual. Além do fato deste código ser usado para realizar inumeros testes, entre 12~14/07/2023
-#(16/07/2023)
-
+#Foi adicionado a função select pressure, juntamente com o gráfico de 
+#gerações x select pressure em tempo real
+#17/07/2023
 
 import time
 import random
@@ -11,6 +10,51 @@ import sys
 from v1_0_fisics_dumper import *
 
 
+import matplotlib.pyplot as plt
+
+
+limit_generation_ = 200
+generation_size_ = 250
+plt.ion()
+class DynamicUpdate():
+    #Suppose we know the x range
+    min_x = 0
+    max_x = limit_generation_
+
+    def on_launch(self):
+        #Set up plot
+        self.figure, self.ax = plt.subplots()
+        self.lines, = self.ax.plot([],[], '-')
+        #Autoscale on unknown axis and known lims on the other
+        self.ax.set_autoscaley_on(True)
+        self.ax.set_xlim(self.min_x, self.max_x)
+        #Other stuff
+        self.ax.set_xlabel('Generation')
+        self.ax.set_ylabel('Select Pressure')
+        self.ax.set_title('Fixed Lenght/Width')
+        self.ax.grid()
+        ...
+
+    def on_running(self, xdata, ydata):
+        #Update data (with the new _and_ the old points)
+        self.lines.set_xdata(xdata)
+        self.lines.set_ydata(ydata)
+        #Need both of these in order to rescale
+        self.ax.relim()
+        self.ax.autoscale_view()
+        #We need to draw *and* flush
+        self.figure.canvas.draw()
+        self.figure.canvas.flush_events()
+
+    def __del__(self):
+        print("morri")
+       
+
+d = DynamicUpdate()
+d.on_launch()
+xdata = []
+ydata = []
+
 #inicial parameters
 error_ = [0.1, 0.1, 0.1, 0.1, 0.1]
 discrete_value_mm = 1
@@ -18,6 +62,19 @@ rigidez_lenght_min = 4/1000
 rigidez_lenght_max = 15/1000
 aco_lenght_min = 1/1000
 aco_lenght_max = 15/1000
+
+#other parameters
+
+#standards frequency targets
+frequency_target = [1774,1524,1452,1025,354]
+# frequency_target = [1774,1524,1452,1025,675]
+# frequency_target = [2000, 1500, 1000, 700, 200]
+# frequency_target = [6000, 3300, 1100, 400, 200]
+
+#real materials thickness (mm)
+rigidez_options_mm = [1, 2, 3, 4]
+aco_options_mm = [3, 3.3, 3.8, 5]
+
 
 #getting parameters from executation line
 if(len(sys.argv) >= 11):
@@ -33,16 +90,10 @@ if(len(sys.argv) >= 11):
 av_error = np.sum(error_)/5
 accuracy_target = 1/av_error
 discrete_value = discrete_value_mm/1000
+select_pressure_vector = []
 
-#standards frequency targets
-frequency_target = [1774,1524,1452,1025,354]
-# frequency_target = [1774,1524,1452,1025,675]
-# frequency_target = [2000, 1500, 1000, 700, 200]
-# frequency_target = [6000, 3300, 1100, 400, 200]
 
-#real materials thickness (mm)
-rigidez_options_mm = [1, 2, 3, 4]
-aco_options_mm = [3, 3.3, 3.8, 5]
+#------------------------------------------------------------- Code --------------------------------------------------------------
 
 #auxiliar functions
 def expovariate(len_ranked_rigidez):
@@ -71,6 +122,8 @@ def select_thickness(vector_mm):
     return (answer, original)
 def print_current_best_individual(best_tuple, rankedsolutions, i):
     os.system('cls' if os.name == 'nt' else 'clear')
+    print()
+    print()
     print(f"Best until now:")
     print(f"  Accuracy:          {round(best_tuple[0], 4)}")
     print(f"  Expected(Hz):      {frequency_target}")
@@ -79,8 +132,9 @@ def print_current_best_individual(best_tuple, rankedsolutions, i):
     print(f"  Average error (%): {round(np.sum(best_tuple[3])/5*100, 4)}")
     print(f"  Spring (mm):       {[round(er[2]*1000, 2) for er in best_tuple[1]]}")
     print(f"  Mass (mm):         {[round(er[2]*1000, 2) for er in best_tuple[2]]}")
-    print(f"  Lenght (cm):       49")
-    print(f"  Width (mm):        50")
+    print(f"  Lenght (cm):       49.0")
+    print(f"  Width (mm):        50.0")
+    print(f"  Elasticity (MPa):  {round(Et/(10e5), 2)}")
     print()
     print(f"=== Gen {i+1} bests solutions ===")
     for j in range(3):
@@ -91,6 +145,30 @@ def print_current_best_individual(best_tuple, rankedsolutions, i):
         # print(f"Average Error: {round(aux_error, 2)}% and Weight: {round(total_weight, 2)}kg")
         print(f"Accuracy: {round(rankedsolutions[j][0], 4)} and Weight: {round(total_weight, 2)}kg")
         # print(f"Error: {[round(er, 2) for er in rankedsolutions[j][3]]}% and Weight: {round(total_weight, 2)}kg")
+    
+    print()
+    #Select Pressure printing
+    best_accurary, average_accurary = select_pressure(rankedsolutions)
+    g0 = 1/best_accurary
+    g = 1/average_accurary
+    current_select_pressure = g0/g 
+    select_pressure_vector.append(current_select_pressure)
+    print(f"Current Select Pressure: {round(current_select_pressure*100, 2)}%,")
+    print(f"Best error: {round(g0*100, 2)}%, Average error: {round(g*100, 2)}%")
+    print("Mutation Global")
+
+    #----------- Printing chart ---------------------
+    xdata.append(i)
+    ydata.append(select_pressure_vector[i])
+    if(limit_generation_ < 150):
+        d.ax.set_xlim(0, limit_generation_-1)
+    if(i%150 == 0):
+        if(i==150):
+            plt.savefig('parcial_select_pressure_result.png', dpi=300)
+        d.ax.set_xlim(i, i+150)
+    if(i==limit_generation_-1):
+        d.ax.set_xlim(0, limit_generation_-1)
+    d.on_running(xdata, ydata)
 def print_best_individual(start, end, correct_ans, best_tuple):
     os.system('cls' if os.name == 'nt' else 'clear')
     print()
@@ -113,6 +191,7 @@ def print_best_individual(start, end, correct_ans, best_tuple):
     average_error = average_error/len(correct_ans)
     print(f"Error per frequency:     {[round(err*100, 2) for err in best_tuple[3]] }%")
     print(f"Average error:           {round(average_error*100, 4)}%")
+    print(f"Accuracy:                {round(best_tuple[0], 4)}")
     print()
 
     total_weight = weight_calculate(best_tuple[2], best_tuple[1])
@@ -126,8 +205,13 @@ def print_best_individual(start, end, correct_ans, best_tuple):
         aco_mm.append(s[2]*1000)
     print(f"Spring thickness(mm):    {[round(r, 2) for r in rigidez_mm]}")#thickness = espessura
     print(f"Mass thickness(mm):      {[round(r, 2) for r in aco_mm]}")
-    print(f"Lenght (cm):       49")
-    print(f"Width (mm):        50")
+    print(f"Lenght (cm):       49.0")
+    print(f"Width (mm):        50.0")
+    print(f"Elasticity (MPa):  {round(Et/(10e5), 2)}")
+    print("Mutation Global")
+
+
+
     print()
 
     print(f"Finished in {round(end-start, 2)}s / {round((end-start)/60, 2)}min / {round((end-start)/60/60, 2)}h")
@@ -225,6 +309,7 @@ def selection_function(p_rigidez, p_aco, correct_ans, limit_generations, generat
 
         #print the best individual info
         print_current_best_individual(best_tuple, rankedsolutions, i)
+        # time.sleep(2)
         
         #stop code if it find the optimal individual based on requirements
         best_error = rankedsolutions[0][3]
@@ -362,13 +447,23 @@ def mutation_function(elements, generation_size):
         new_aco.append(ac)
     return new_rigidez, new_aco
 
+def select_pressure(generation_tuples):
+    vector_error = []
+
+    best_individual_error = generation_tuples[0][0]
+    for individual in generation_tuples:
+        if(individual[0] != 0):
+            vector_error.append(individual[0])
+    average_error = np.sum(vector_error)/(len(vector_error))
+    return best_individual_error, average_error
+
 
 #--------------------------teste select_function-------------------------------------
-print("--------------------------teste selection_function-------------------------------------")
-rigidez, aco = generate_new_solution(500)
+print("--------------------------Start Code-------------------------------------")
+rigidez, aco = generate_new_solution(generation_size_)
 #parameters         [L,C,tmola,Eepdm],  [L,C,taco], [Hz, Hz, Hz, Hz, Hz],   limit_generation,   generation_size
-selection_function  (rigidez,           aco,        frequency_target,       40000,                500)
-
+selection_function  (rigidez,           aco,        frequency_target,       limit_generation_,                generation_size_)
+plt.savefig('final_select_pressure_result.png', dpi=300)
 
 #realizar a variação do comprimento entre 40 e 60 centimetro
 #largura 45 e 55mm

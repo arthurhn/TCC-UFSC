@@ -1,34 +1,39 @@
-#Aqui é introduzido o crossover, porém não é salvo os melhor da geração, logo,
-#os melhores ao longo dos ciclos variam. Ainda erro quadratico.
-#(30/05/2023)
+#Aqui ele passa a armazenar os melhores da geração, logo as gerações sempre são progressivas,
+#exibindo assim enfim, o melhor individuo que apareceu ao longo das gerações ao final das gerações
+#além de adicionar pesos às frequencias passando também o erro do maneira individual à elas.
+#Também foi iniciado aqui a tentativa de passar as espessuras em forma de vetor, aparentemente
+#funcionando para o caso de escolher em 4mm e 6mm, porém não muito confiável ainda essa função
+#além de apenas escolher, e não realizar o calculo dos multiplos
 
+#(07/06/2023)
 import time
 import random
 import numpy as np
 from numpy import linalg as LA
 import os
 import sys
-porcentage_error_target = 10/100
+
+#inicial errors
+error_ = [0.1, 0.1, 0.1, 0.1, 0.1]
 discrete_value_mm = 1
 rigidez_lenght_min = 4/1000
 rigidez_lenght_max = 15/1000
 aco_lenght_min = 1/1000
 aco_lenght_max = 15/1000
-if(len(sys.argv) >= 3):
-    porcentage_error_target = float(sys.argv[1])/100
-    discrete_value_mm = float(sys.argv[2])
-if(len(sys.argv) >= 5):
-    rigidez_lenght_min = float(sys.argv[3])/1000
-    rigidez_lenght_max = float(sys.argv[4])/1000
-if(len(sys.argv) >= 7):
-    aco_lenght_min = float(sys.argv[5])/1000
-    aco_lenght_max = float(sys.argv[6])/1000
+
+
+if(len(sys.argv) >= 11):
+    error_ = [float(sys.argv[6])/100, float(sys.argv[7])/100, float(sys.argv[8])/100, float(sys.argv[9])/100, float(sys.argv[10])/100]
+    discrete_value_mm = float(sys.argv[1])
+    rigidez_lenght_min = float(sys.argv[2])/1000
+    rigidez_lenght_max = float(sys.argv[3])/1000
+    aco_lenght_min = float(sys.argv[4])/1000
+    aco_lenght_max = float(sys.argv[5])/1000
 
 
 #accuracy
-error_ = (porcentage_error_target)**2
-accuracy_target = 1/error_
-
+av_error = np.sum(error_)/5
+accuracy_target = 1/av_error
 discrete_value = discrete_value_mm/1000
 frequency_target = [1774,1524,1452,1025,354]
 # frequency_target = [1774,1524,1452,1025,675]
@@ -38,7 +43,7 @@ frequency_target = [1774,1524,1452,1025,354]
 L = 0.49 #comprimento
 C = 0.057 #largura
 Et      = 3.5e6#elasticidade tapete
-Eepdm    = 2.3e6#elasticidade (fitas) Pa
+Eepdm    = 2.3e6#elasticidade (fitas) Pa (C101/C)
 rho_M=7800#densidade massa
 rho_K=1300#densidade mola(fita)
 
@@ -158,7 +163,7 @@ def fitness(aco, rigidez, correct_ans):
     
     #Limitation of weight values part
     total_weight = weight_calculate(aco, rigidez)
-    if(total_weight < 1 or total_weight > 8):
+    if(total_weight < 4 or total_weight > 9):
         error = 10**10
 
     #Limitation of thickness values part  
@@ -168,31 +173,40 @@ def fitness(aco, rigidez, correct_ans):
     for _rigidez in rigidez:
         if(_rigidez[2] < rigidez_lenght_min or _rigidez[2] > rigidez_lenght_max):
             error = 10**10
+    
     if(error != 0):
-        return abs(1/error)
+        return [0, [1, 1, 1, 1, 1], [0, 0, 0, 0, 0]]
     
     ans = main_function(aco, rigidez)
     ans = np.sort(ans)
     ans = ans[::-1]
-    #correct_asn = [1917.53874113, 1374.28870256, 1071.3959315, 602.29675343, 181.45124695]
-    #calculando o erro como medio quadratico
-    error = (((ans[0]-correct_ans[0])/correct_ans[0])**2 + ((ans[1]-correct_ans[1])/correct_ans[1])**2 + ((ans[2]-correct_ans[2])/correct_ans[2])**2 + ((ans[3]-correct_ans[3])/correct_ans[3])**2 + ((ans[4]-correct_ans[4])/correct_ans[4])**2)/len(correct_ans)
+    vector_error = [((ans[0]-correct_ans[0])/correct_ans[0]), ((ans[1]-correct_ans[1])/correct_ans[1]), ((ans[2]-correct_ans[2])/correct_ans[2]), ((ans[3]-correct_ans[3])/correct_ans[3]), ((ans[4]-correct_ans[4])/correct_ans[4])]
+    vector_error = [abs(v) for v in vector_error]
+    weight = [2, 3, 4, 5, 1]
+    error = (vector_error[0]*weight[0] + vector_error[1]*weight[1] + vector_error[2]*weight[2] + vector_error[3]*weight[3] + vector_error[4]*weight[4])/np.sum(weight)
     if error == 0:
         return 9999999999
-   
-    return abs(1/error)
+    return [abs(1/error), vector_error, ans]
 
+
+rigidez_list = [6, 4]
+rigidez_list_mm = [ri/1000 for ri in rigidez_list]
 #cria o primeiro conjunto de soluções
 def generate_new_solution(generation_size):
     _aco = []
     _rigidez = []
     for _ in range(generation_size):
         list1 = [
-            0.001*random.randint(4,8),
-            0.001*random.randint(4,8),
-            0.001*random.randint(4,8),
-            0.001*random.randint(4,8),
-            0.001*random.randint(4,8),
+            # 0.001*random.randint(1,8),
+            # 0.001*random.randint(1,8),
+            # 0.001*random.randint(1,8),
+            # 0.001*random.randint(1,8),
+            # 0.001*random.randint(1,8),
+            random.choice(rigidez_list_mm),
+            random.choice(rigidez_list_mm),
+            random.choice(rigidez_list_mm),
+            random.choice(rigidez_list_mm),
+            random.choice(rigidez_list_mm),
             ]
         list2 = [
             0.001*random.randint(1,8),
@@ -210,12 +224,26 @@ def generate_new_solution(generation_size):
 
 def selection_function(p_rigidez, p_aco, correct_ans, limit_generations, generation_size):
     assert len(p_rigidez) == len(p_aco), "Vetor de rigidezes e acos com tamanhos diferentes"
+    
+    #assigned the first tuple for compare 
+    rigidez, aco = parametros(p_rigidez[0], p_aco[0])
+    parcial_vector = fitness(aco, rigidez, correct_ans)
+    precision = parcial_vector[0]
+    vector_errors = parcial_vector[1]
+    vector_ans = parcial_vector[2]
+    best_tuple = (precision, rigidez, aco, vector_errors, vector_ans)
+
     start = time.time()
     for i in range(limit_generations):
         rankedsolutions = []
         for j in range(len(p_rigidez)):
             rigidez, aco = parametros(p_rigidez[j], p_aco[j])
-            rankedsolutions.append((fitness(aco, rigidez, correct_ans), rigidez, aco)) #tuple contains the value of result (acuracy) and rididez and aco vector
+            parcial_vector = fitness(aco, rigidez, correct_ans)
+            precision = parcial_vector[0]
+            vector_errors = parcial_vector[1]
+            vector_ans = parcial_vector[2]
+            if(precision != 0):
+                rankedsolutions.append((precision, rigidez, aco, vector_errors, vector_ans)) #tuple contains the value of result (acuracy) and rididez and aco vector
         
         rankedsolutions_sort = [rankedsolutions[0]]
         for k in range(0, len(rankedsolutions)):
@@ -227,47 +255,50 @@ def selection_function(p_rigidez, p_aco, correct_ans, limit_generations, generat
                     rankedsolutions_sort.append(rankedsolutions[k])
                     break
         rankedsolutions = rankedsolutions_sort
-        # print(f"n: {i+1}, accuracy: {rankedsolutions[0][0]}")
-            
-        # rankedsolutions.sort()
-        # rankedsolutions = rankedsolutions[::-1]
 
+        if(best_tuple[0] < rankedsolutions[0][0]):
+            best_tuple = rankedsolutions[0]
 
         os.system('cls' if os.name == 'nt' else 'clear')
+        print(f"Best until now:")
+        print(f"  Accuracy:          {round(best_tuple[0], 4)}")
+        print(f"  Answer (Hz):       {[int(freq) for freq in best_tuple[4]]}")
+        print(f"  Vector error (%):  {[round(er*100, 2) for er in best_tuple[3]]}")
+        print(f"  Average error (%): {round(np.sum(best_tuple[3])/5*100, 4)}")
+        print(f"  Spring (mm):       {[round(er[2]*1000, 2) for er in best_tuple[1]]}")
+        print(f"  Mass (mm):         {[round(er[2]*1000, 2) for er in best_tuple[2]]}")
+        print()
         print(f"=== Gen {i+1} bests solutions ===")
-        for j in range(5):
-            aux_error = 1/rankedsolutions[j][0]
-            aux_porcentage = np.sqrt(aux_error)*100
+        for j in range(3):
+            aux_vector_error = rankedsolutions[j][3]
+            aux_error = np.sum(aux_vector_error)/5*100
             total_weight = weight_calculate(rankedsolutions[j][2], rankedsolutions[j][1])
-            print(f"Error: {round(aux_porcentage, 2)}% and Weight: {round(total_weight, 2)}kg")
-
-        if rankedsolutions[0][0] > accuracy_target:
-            p_rigidez = []
-            p_rigidez.append([
-                rankedsolutions[0][1][0][2],
-                rankedsolutions[0][1][1][2],
-                rankedsolutions[0][1][2][2],
-                rankedsolutions[0][1][3][2],
-                rankedsolutions[0][1][4][2]
-                            ])
-            p_aco = []
-            p_aco.append([
-                rankedsolutions[0][2][0][2],
-                rankedsolutions[0][2][1][2],
-                rankedsolutions[0][2][2][2],
-                rankedsolutions[0][2][3][2],
-                rankedsolutions[0][2][4][2]
-                            ])
+            # print(f"Error: {round(aux_error, 2)}% and vector_error: {[round(100*er, 2) for er in rankedsolutions[j][3]]}%")
+            # print(f"Average Error: {round(aux_error, 2)}% and Weight: {round(total_weight, 2)}kg")
+            print(f"Accuracy: {round(rankedsolutions[0][0], 4)} and Weight: {round(total_weight, 2)}kg")
+            # print(f"Error: {[round(er, 2) for er in rankedsolutions[j][3]]}% and Weight: {round(total_weight, 2)}kg")
+        
+        best_error = rankedsolutions[0][3]
+        if  (best_error[0] < error_[0] and best_error[1] < error_[1] and best_error[2] < error_[2] and best_error[3] < error_[3] and best_error[4] < error_[4]):
+            best_tuple = rankedsolutions[0]
+            print("Preparing results")
+            # print("Preparing results", end="")
+            time.sleep(1.5)
+            for _ in range(3):
+                print(".")
+                time.sleep(0.6)
             break
+        
         p_rigidez, p_aco = mutation_function(crossover_function(rankedsolutions[:10]), generation_size)
+        # time.sleep(1.5)
     end = time.time()
-    os.system('cls' if os.name == 'nt' else 'clear')
+    # os.system('cls' if os.name == 'nt' else 'clear')
     print()
     print("====== Best results ======")
     print()
+
     print(f"Expected frequencys(Hz): {correct_ans}")
-    tmola, taco = parametros(p_rigidez[0], p_aco[0])
-    ans_frequency = main_function(taco, tmola)
+    ans_frequency = main_function(best_tuple[2], best_tuple[1])
     print("Obtained frequencys(Hz): [", end="")
 
     for d in range(len(ans_frequency)):
@@ -281,27 +312,23 @@ def selection_function(p_rigidez, p_aco, correct_ans, limit_generations, generat
         average_error += abs((ans_frequency[i]-correct_ans[i])/correct_ans[i])
     average_error = average_error/len(correct_ans)
     print(f"Average error: {round(average_error*100, 4)}%")
+    print(f"Error per frequency: {[round(err*100, 2) for err in best_tuple[3]] }%")
     print()
 
-    total_weight = weight_calculate(taco, tmola)
+    total_weight = weight_calculate(best_tuple[2], best_tuple[1])
     print(f"Weight: {round(total_weight, 2)}kg")
 
-    #print(f"Spring thickness(m): {p_rigidez[0]}")#thickness = espessura
-    #print(f"Mass thickness(m): {p_aco[0]}")
     rigidez_mm = []
     aco_mm = []
-    for s in p_rigidez[0]:
-        rigidez_mm.append(s*1000)
-    for s in p_aco[0]:
-        aco_mm.append(s*1000)
+    for s in best_tuple[1]:
+        rigidez_mm.append(s[2]*1000)
+    for s in best_tuple[2]:
+        aco_mm.append(s[2]*1000)
     print(f"Spring thickness(mm): {[round(r, 2) for r in rigidez_mm]}")#thickness = espessura
     print(f"Mass thickness(mm): {[round(r, 2) for r in aco_mm]}")
     print()
 
     print(f"Finished in {round(end-start, 2)}s")
-    return
-
-    # print(f"obtained frequencys: {}")
     return
 
 def crossover_function(bestsolutions):
@@ -327,21 +354,32 @@ def crossover_function(bestsolutions):
         how_many_try_changes = random.randint(1, 4)
         chosen_position = random.randint(0, 10-1)
         # print(f"original: {chosen_position}, who_is_change: {who_is_change}, how_many_try_changes: {how_many_try_changes}")
+        chosen_position2 = random.randint(0, 10-1)
+        while (chosen_position2 == chosen_position):
+            chosen_position2 = random.randint(0, 10-1)
 
         new_rigidez = np.copy(original_rigidez_thickness[chosen_position])
         new_aco = np.copy(original_aco_thickness[chosen_position])
+        
+        new_rigidez_copy = np.copy(original_rigidez_thickness[chosen_position2])
+        new_aco_copy = np.copy(original_aco_thickness[chosen_position2])
+        
         if(who_is_change == 0):
             for _ in range(how_many_try_changes):
-                new_rigidez[random.randint(0, 4)] = (random.choice(original_rigidez_thickness))[random.randint(0, 4)]
+                change_position = random.randint(0, 4)
+                new_rigidez[change_position] = new_rigidez_copy[change_position]
         if(who_is_change == 1):
             for _ in range(how_many_try_changes):
-                new_aco[random.randint(0, 4)] = (random.choice(original_rigidez_thickness))[random.randint(0, 4)]
+                change_position = random.randint(0, 4)
+                new_aco[change_position] = new_aco_copy[change_position]
         if(who_is_change == 2):
             for _ in range(how_many_try_changes):
-                new_rigidez[random.randint(0, 4)] = (random.choice(original_rigidez_thickness))[random.randint(0, 4)]
+                change_position = random.randint(0, 4)
+                new_rigidez[change_position] = new_rigidez_copy[change_position]
             how_many_try_changes = random.randint(1, 4)
             for _ in range(how_many_try_changes):
-                new_aco[random.randint(0, 4)] = (random.choice(original_rigidez_thickness))[random.randint(0, 4)]
+                change_position = random.randint(0, 4)
+                new_aco[change_position] = new_aco_copy[change_position]
         crossover_rigidez.append(new_rigidez)
         crossover_aco.append(new_aco)
                 
@@ -349,14 +387,6 @@ def crossover_function(bestsolutions):
 
 def mutation_function(elements, generation_size):
     ranked_rigidez, ranked_aco, crossover_rigidez, crossover_aco = elements
-    # print("ranked_rigidez")
-    # print(ranked_rigidez)
-    # print()
-    # print("crossover_rigidez")
-    # print(str(crossover_rigidez).replace('array', '').replace('[(', '[').replace('(', '').replace(')', '').replace(')]', ']').replace('],', ']\n'))
-    # print()
-    # print()
-    # sys.exit()
     new_rigidez = []
     new_aco = []
     assert len(ranked_rigidez) == len(ranked_aco), "Vetor p_ridizes e p_aco com tamanhos diferentes, mutation_function"
@@ -375,31 +405,42 @@ def mutation_function(elements, generation_size):
             solutions_aco.append(ranked_aco[i])
         else:
             solutions_aco.append(crossover_aco[i-len(ranked_aco)])
-    # print(str(solutions_rigidez).replace('array', '').replace('[(', '[').replace('(', '').replace(')', '').replace(')]', ']').replace('],', ']\n'))
-    # sys.exit()
-    for _ in range(generation_size):
+   
+   
+    for _ in range(generation_size-10):
         one_rigidez = []
         one_aco = []
-        #usando distribuição exponencial pra pegar as melhores soluções, ja que elas estão ordenadas da ma=elhor solução para pior
-        # i = expovariate(len(ranked_rigidez))
-        i = random.randint(0, len(solutions_rigidez)-1)#escolhendo uma das melhores amostrar (metodo antigo)
+        #dado o vector concatenado solutions, o valor de i que é quem vai escolher o individuo a ser mutado para criar um novo, 
+        # será em média, 50% das vezes a primeira metade do vector (ranked_rigidez) que é quem tem as melhores soluções 
+        # da generação antiga, tendendo a escolher o melhor através da expovariete e 50% totalmente randomico dos que receberem crossover (cruzamento)
+        best_or_crossver = random.randint(0, 1)
+        if(best_or_crossver == 1):
+            i = expovariate(len(ranked_rigidez))#escolhendo uma das melhores amostrar (metodo antigo)
+        else:
+            i = random.randint(0, len(crossover_rigidez)-1)+len(ranked_rigidez)
         #------------------------------------------------------------------------------------------
         signal = [-1, 1]
         for j in range(len(solutions_aco[0])):
             # print(f"ranked_rigidez[{i}][{j}]:{ranked_rigidez[i][j]}")
-            new_lenght_aco = abs(solutions_aco[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(1, 4)))
+            new_lenght_aco = abs(solutions_aco[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
             while new_lenght_aco < 0.000001:
-                new_lenght_aco = abs(solutions_aco[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(1, 4)))
+                new_lenght_aco = abs(solutions_aco[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
             one_aco.append(round(new_lenght_aco, 6)) #current number +- 0.001 or 0.002 ....
         for j in range(len(solutions_rigidez[0])):
-            new_lenght_rigidez = abs(solutions_rigidez[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(1, 4)))
+            new_lenght_rigidez = random.choice(rigidez_list_mm)
+            # new_lenght_rigidez = abs(solutions_rigidez[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
+            # new_lenght_rigidez = abs(solutions_rigidez[i][j])
             while new_lenght_rigidez < 0.000001:
-                new_lenght_rigidez = abs(solutions_rigidez[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(1, 4)))
+                new_lenght_rigidez = random.choice(rigidez_list_mm)
+                # new_lenght_rigidez = abs(solutions_rigidez[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
+                # new_lenght_rigidez = abs(solutions_rigidez[i][j])
             one_rigidez.append(round(new_lenght_rigidez, 6)) #current number +- 0.001 or 0.002 ....
         new_rigidez.append(one_rigidez)
         new_aco.append(one_aco)
-    # print(f"new_rigidez: {new_rigidez}")
-    # print(f"new_aco: {new_aco}")
+    for ri in ranked_rigidez:
+        new_rigidez.append(ri)
+    for ac in ranked_aco:
+        new_aco.append(ac)
     return new_rigidez, new_aco
 
 
@@ -408,18 +449,11 @@ def mutation_function(elements, generation_size):
 print("--------------------------teste selection_function-------------------------------------")
 #[L,C,tmola,Eepdm], [L,C,taco], [Hz, Hz, Hz, Hz, Hz], limit_generation, generation_size
 rigidez2, aco2 = generate_new_solution(150)
-selection_function(rigidez2, aco2, frequency_target, 180, 150)
+selection_function(rigidez2, aco2, frequency_target, 30000, 200)
 
-#deixar a mola(borracha), todas elas de 1mm
-#varias as chapas de aço, com variação de 0.5 em 0.5mm
-#limitar as espessuras do aço de 1 a 8mm
-#não importa a ordem das frequencias da resposta, ordenar do maior pro menor pra comparar 
-#borrachas temos espesura de 1 em 1mm
-# print(f"error max: {porcentage_error_target}")
-
-#armazenar os 15 primeiros e realizar uma crosovr no resto
-#calcular a massa de todo o atenuador e delimitar a resposta final com base nisso
-#se for menor que 3kg ou maior que 8kg, descarta
+#pensei em deixar a matriz de pesos dinamicas, o que notei é que por exemplo, uma vez que ele atinge 4 frequencias,
+#  mas esta consideravelmente longe da outra, seria interessante mudar a matriz de forma a dar prioridade na frequencia
+#que ainda não foi atingida o erro 
 
 
 

@@ -1,6 +1,9 @@
-#Foi adicionado a função select pressure, juntamente com o gráfico de 
-#gerações x select pressure em tempo real
-#17/07/2023
+#Melhoras estruturais como 
+#a opção de plotar gráfico como entrada do próprio código.
+#Além da opção do auto re-run caso o código não atinja os requisitos de erro
+#passados via parametro.
+#E também foi adicionado o plot da precisão do melhor indivíduo
+#18/07/2023
 
 import time
 import random
@@ -13,9 +16,11 @@ from v1_0_fisics_dumper import *
 import matplotlib.pyplot as plt
 
 
-limit_generation_ = 200
+limit_generation_ = 1000
 generation_size_ = 250
-plt.ion()
+chart_on = False
+if(chart_on):
+    plt.ion()
 class DynamicUpdate():
     #Suppose we know the x range
     min_x = 0
@@ -23,37 +28,44 @@ class DynamicUpdate():
 
     def on_launch(self):
         #Set up plot
-        self.figure, self.ax = plt.subplots()
-        self.lines, = self.ax.plot([],[], '-')
+        self.figure, self.ax = plt.subplots(2)
+        self.figure.suptitle('Fixed Lenght/Width - Global Search')
+        self.lines, = self.ax[0].plot([],[], '-')
+        self.lines1, = self.ax[1].plot([],[], '-')
         #Autoscale on unknown axis and known lims on the other
-        self.ax.set_autoscaley_on(True)
-        self.ax.set_xlim(self.min_x, self.max_x)
+        self.ax[0].set_autoscaley_on(True)
+        self.ax[0].set_xlim(self.min_x, self.max_x)
+        self.ax[1].set_autoscaley_on(True)
+        self.ax[1].set_xlim(self.min_x, self.max_x)
         #Other stuff
-        self.ax.set_xlabel('Generation')
-        self.ax.set_ylabel('Select Pressure')
-        self.ax.set_title('Fixed Lenght/Width')
-        self.ax.grid()
-        ...
+        self.ax[0].set_ylabel('Best Accuracy')
+        self.ax[1].set_xlabel('Generation')
+        self.ax[1].set_ylabel('Select Pressure')
+        self.ax[0].grid()
+        self.ax[1].grid()
 
-    def on_running(self, xdata, ydata):
+    def on_running(self, xdata, ydata1, ydata2):
         #Update data (with the new _and_ the old points)
-        self.lines.set_xdata(xdata)
-        self.lines.set_ydata(ydata)
+        self.lines, = self.ax[0].plot(xdata,ydata1, 'r-')
+        self.lines1, = self.ax[1].plot(xdata,ydata2, 'b-')
+        # self.lines.set_ydata(new_ydata)
         #Need both of these in order to rescale
-        self.ax.relim()
-        self.ax.autoscale_view()
+        self.ax[0].relim()
+        self.ax[1].relim()
+        self.ax[1].autoscale_view()
+        self.ax[0].autoscale_view()
         #We need to draw *and* flush
         self.figure.canvas.draw()
         self.figure.canvas.flush_events()
+        
+undone = True
 
-    def __del__(self):
-        print("morri")
-       
-
-d = DynamicUpdate()
-d.on_launch()
+if(chart_on):
+    d = DynamicUpdate()
+    d.on_launch()
 xdata = []
-ydata = []
+ydata_sp = []
+ydata_ac = []
 
 #inicial parameters
 error_ = [0.1, 0.1, 0.1, 0.1, 0.1]
@@ -72,7 +84,7 @@ frequency_target = [1774,1524,1452,1025,354]
 # frequency_target = [6000, 3300, 1100, 400, 200]
 
 #real materials thickness (mm)
-rigidez_options_mm = [1, 2, 3, 4]
+rigidez_options_mm = [2, 3, 4]
 aco_options_mm = [3, 3.3, 3.8, 5]
 
 
@@ -156,19 +168,35 @@ def print_current_best_individual(best_tuple, rankedsolutions, i):
     print(f"Current Select Pressure: {round(current_select_pressure*100, 2)}%,")
     print(f"Best error: {round(g0*100, 2)}%, Average error: {round(g*100, 2)}%")
     print("Mutation Global")
+    #Select Pressure of book printing
+    # print()
+    # best_accurary_, average_accurary_, stardand_deviation_ = select_pressure_book(rankedsolutions)
+    # g_ = 1/best_accurary_
+    # f_ = 1/average_accurary_
+    # current_select_pressure_ = (g_-f_)/stardand_deviation_ 
+    # select_pressure_vector_.append(current_select_pressure_)
+    # print(f"Current Select Pressure Book: {round(current_select_pressure_*100, 2)}%,")
+    # print(f"Best error: {round(g_*100, 2)}%, Average error: {round(f_*100, 2)}%, , Stardand Deviation: {round(g_, 4)}")
+
+
 
     #----------- Printing chart ---------------------
-    xdata.append(i)
-    ydata.append(select_pressure_vector[i])
-    if(limit_generation_ < 150):
-        d.ax.set_xlim(0, limit_generation_-1)
-    if(i%150 == 0):
-        if(i==150):
-            plt.savefig('parcial_select_pressure_result.png', dpi=300)
-        d.ax.set_xlim(i, i+150)
-    if(i==limit_generation_-1):
-        d.ax.set_xlim(0, limit_generation_-1)
-    d.on_running(xdata, ydata)
+    if(chart_on):
+        xdata.append(i)
+        ydata_sp.append(current_select_pressure)
+        ydata_ac.append(rankedsolutions[0][0])
+        if(limit_generation_ < 150):
+            d.ax[0].set_xlim(0, limit_generation_-1)
+            d.ax[1].set_xlim(0, limit_generation_-1)
+        if(i%150 == 0):
+            if(i==150):
+                plt.savefig('parcial_select_pressure_result_local.png', dpi=300)
+            d.ax[0].set_xlim(i, i+150)
+            d.ax[1].set_xlim(i, i+150)
+        if(i==limit_generation_-1):
+            d.ax[0].set_xlim(0, limit_generation_-1)
+            d.ax[1].set_xlim(0, limit_generation_-1)
+        d.on_running(xdata, ydata_ac, ydata_sp)
 def print_best_individual(start, end, correct_ans, best_tuple):
     os.system('cls' if os.name == 'nt' else 'clear')
     print()
@@ -211,12 +239,10 @@ def print_best_individual(start, end, correct_ans, best_tuple):
     print("Mutation Global")
 
 
-
     print()
 
     print(f"Finished in {round(end-start, 2)}s / {round((end-start)/60, 2)}min / {round((end-start)/60/60, 2)}h")
     return
-
 
 #rate a individual
 def fitness(aco, rigidez, correct_ans):
@@ -277,6 +303,7 @@ def selection_function(p_rigidez, p_aco, correct_ans, limit_generations, generat
     vector_ans = parcial_vector[2]
     best_tuple = (precision, rigidez, aco, vector_errors, vector_ans)
 
+    unfinished = True
     start = time.time()
     for i in range(limit_generations):
         rankedsolutions = []
@@ -315,13 +342,14 @@ def selection_function(p_rigidez, p_aco, correct_ans, limit_generations, generat
         best_error = rankedsolutions[0][3]
         if  (best_error[0] < error_[0] and best_error[1] < error_[1] and best_error[2] < error_[2] and best_error[3] < error_[3] and best_error[4] < error_[4]):
             best_tuple = rankedsolutions[0]
-            print("Preparing results")
-            # print("Preparing results", end="")
-            time.sleep(1.5)
-            for _ in range(3):
-                print(".")
-                time.sleep(0.6)
+            unfinished = False
             break
+        #para os testes do dia 18~19/07/2023
+        if(rankedsolutions[0][0] > 17):
+            best_tuple = rankedsolutions[0]
+            unfinished = False
+            break
+
 
         crossover_generation = crossover_function(rankedsolutions[:10])
         p_rigidez, p_aco = mutation_function(crossover_generation, generation_size)
@@ -330,6 +358,9 @@ def selection_function(p_rigidez, p_aco, correct_ans, limit_generations, generat
     #print the final solution at end of the limit generation
     end = time.time()
     print_best_individual(start, end, correct_ans, best_tuple)
+    if(unfinished == False):
+        return False
+    return True
 
 #mix thickness between individuals
 def crossover_function(bestsolutions):
@@ -462,9 +493,16 @@ def select_pressure(generation_tuples):
 print("--------------------------Start Code-------------------------------------")
 rigidez, aco = generate_new_solution(generation_size_)
 #parameters         [L,C,tmola,Eepdm],  [L,C,taco], [Hz, Hz, Hz, Hz, Hz],   limit_generation,   generation_size
-selection_function  (rigidez,           aco,        frequency_target,       limit_generation_,                generation_size_)
-plt.savefig('final_select_pressure_result.png', dpi=300)
+undone = selection_function  (rigidez,           aco,        frequency_target,       limit_generation_,                generation_size_)
+if chart_on:
+    plt.savefig('final_select_pressure_result_global.png', dpi=300)
 
-#realizar a variação do comprimento entre 40 e 60 centimetro
-#largura 45 e 55mm
-#borracha variar de de 2mm a 6mm, variando de 0.5 em 0.5
+if(undone):
+    print("Preparing to rerun")
+    # time.sleep(1)
+    # for _ in range(5):
+    #     print(".")
+    #     time.sleep(0.6)
+    #os.execv(sys.executable, ['python3'] + sys.argv)
+
+print("--------------------End--------------------")

@@ -1,9 +1,9 @@
-#Melhoras estruturais como 
-#a opção de plotar gráfico como entrada do próprio código.
-#Além da opção do auto re-run caso o código não atinja os requisitos de erro
-#passados via parametro.
-#E também foi adicionado o plot da precisão do melhor indivíduo
-#18/07/2023
+#Foi verificado que a forma em que foi feita a mutação escolhendo multiplos
+#da espessura via vetor, estava desconsiderando todo o crossover e 
+#Apenas realizando uma mutação em toda a população (menos os melhores)
+#Por isso a busca era mais global, aqui essa função mutation foi alterada
+#para conservar as caracteristicas do crossover.
+#(19/07/2023)
 
 import time
 import random
@@ -16,7 +16,7 @@ from v1_0_fisics_dumper import *
 import matplotlib.pyplot as plt
 
 
-limit_generation_ = 1000
+limit_generation_ = 400
 generation_size_ = 250
 chart_on = False
 if(chart_on):
@@ -29,7 +29,7 @@ class DynamicUpdate():
     def on_launch(self):
         #Set up plot
         self.figure, self.ax = plt.subplots(2)
-        self.figure.suptitle('Fixed Lenght/Width - Global Search')
+        self.figure.suptitle('Fixed Lenght/Width - Local Search')
         self.lines, = self.ax[0].plot([],[], '-')
         self.lines1, = self.ax[1].plot([],[], '-')
         #Autoscale on unknown axis and known lims on the other
@@ -57,8 +57,8 @@ class DynamicUpdate():
         #We need to draw *and* flush
         self.figure.canvas.draw()
         self.figure.canvas.flush_events()
-        
-undone = True
+       
+undone = False
 
 if(chart_on):
     d = DynamicUpdate()
@@ -167,18 +167,7 @@ def print_current_best_individual(best_tuple, rankedsolutions, i):
     select_pressure_vector.append(current_select_pressure)
     print(f"Current Select Pressure: {round(current_select_pressure*100, 2)}%,")
     print(f"Best error: {round(g0*100, 2)}%, Average error: {round(g*100, 2)}%")
-    print("Mutation Global")
-    #Select Pressure of book printing
-    # print()
-    # best_accurary_, average_accurary_, stardand_deviation_ = select_pressure_book(rankedsolutions)
-    # g_ = 1/best_accurary_
-    # f_ = 1/average_accurary_
-    # current_select_pressure_ = (g_-f_)/stardand_deviation_ 
-    # select_pressure_vector_.append(current_select_pressure_)
-    # print(f"Current Select Pressure Book: {round(current_select_pressure_*100, 2)}%,")
-    # print(f"Best error: {round(g_*100, 2)}%, Average error: {round(f_*100, 2)}%, , Stardand Deviation: {round(g_, 4)}")
-
-
+    print("Mutation Local")
 
     #----------- Printing chart ---------------------
     if(chart_on):
@@ -236,13 +225,14 @@ def print_best_individual(start, end, correct_ans, best_tuple):
     print(f"Lenght (cm):       49.0")
     print(f"Width (mm):        50.0")
     print(f"Elasticity (MPa):  {round(Et/(10e5), 2)}")
-    print("Mutation Global")
+    print("Mutation Local")
 
 
     print()
 
     print(f"Finished in {round(end-start, 2)}s / {round((end-start)/60, 2)}min / {round((end-start)/60/60, 2)}h")
     return
+
 
 #rate a individual
 def fitness(aco, rigidez, correct_ans):
@@ -453,6 +443,105 @@ def mutation_function(elements, generation_size):
             i = random.randint(0, len(crossover_rigidez)-1)+len(ranked_rigidez)
         #------------------------------------------------------------------------------------------
         signal = [-1, 1]
+
+
+        how_is_change = random.randint(0, 3) #0 -> only rigidez will change, 1 -> only aco, 2 -> both, 3 -> none 
+
+        if(how_is_change == 0):
+            #rigidez changed
+            for j in range(len(solutions_rigidez[0])):
+                new_lenght_rigidez = select_thickness(rigidez_options_mm)[0]
+                # new_lenght_rigidez = abs(solutions_rigidez[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
+                while new_lenght_rigidez < 0.000001:
+                    new_lenght_rigidez = select_thickness(rigidez_options_mm)[0]
+                    # new_lenght_rigidez = abs(solutions_rigidez[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
+                one_rigidez.append(round(new_lenght_rigidez, 6)) #current number +- 0.001 or 0.002 ....
+            #aco doesnt change
+            one_aco = [solutions_aco[i][j] for j in range(len(solutions_aco[i]))]
+
+        elif(how_is_change == 1):
+            #rigidez doesnt change
+            one_rigidez = [solutions_rigidez[i][j] for j in range(len(solutions_rigidez[i]))]
+            #aco changed
+            for j in range(len(solutions_aco[0])):
+                new_lenght_aco = select_thickness(aco_options_mm)[0]
+                # new_lenght_aco = abs(solutions_aco[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
+                while new_lenght_aco < 0.000001:
+                    new_lenght_aco = select_thickness(aco_options_mm)[0]
+                    # new_lenght_aco = abs(solutions_aco[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
+                one_aco.append(round(new_lenght_aco, 6)) #current number +- 0.001 or 0.002 ....
+
+        elif(how_is_change == 2):
+            #both changed
+            for j in range(len(solutions_aco[0])):
+                new_lenght_aco = select_thickness(aco_options_mm)[0]
+                # new_lenght_aco = abs(solutions_aco[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
+                while new_lenght_aco < 0.000001:
+                    new_lenght_aco = select_thickness(aco_options_mm)[0]
+                    # new_lenght_aco = abs(solutions_aco[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
+                one_aco.append(round(new_lenght_aco, 6)) #current number +- 0.001 or 0.002 ....
+            for j in range(len(solutions_rigidez[0])):
+                new_lenght_rigidez = select_thickness(rigidez_options_mm)[0]
+                # new_lenght_rigidez = abs(solutions_rigidez[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
+                while new_lenght_rigidez < 0.000001:
+                    new_lenght_rigidez = select_thickness(rigidez_options_mm)[0]
+                    # new_lenght_rigidez = abs(solutions_rigidez[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
+                one_rigidez.append(round(new_lenght_rigidez, 6)) #current number +- 0.001 or 0.002 ....
+
+        elif(how_is_change == 3):
+            #both doesnt change
+            one_rigidez = [solutions_rigidez[i][j] for j in range(len(solutions_rigidez[i]))]
+            one_aco = [solutions_aco[i][j] for j in range(len(solutions_aco[i]))]
+
+        # print(f"how_is_change: {how_is_change}")
+        # print([round(one*1000, 2) for one in one_rigidez])
+        # print([round(one*1000, 2) for one in one_aco])
+        # sys.exit()
+        new_rigidez.append(one_rigidez)
+        new_aco.append(one_aco)
+
+    for ri in ranked_rigidez:
+        new_rigidez.append(ri)
+    for ac in ranked_aco:
+        new_aco.append(ac)
+    return new_rigidez, new_aco
+
+#old mutation function, not considering any crossover if use this one
+def global_mutation_function(elements, generation_size):
+    ranked_rigidez, ranked_aco, crossover_rigidez, crossover_aco = elements
+    new_rigidez = []
+    new_aco = []
+    assert len(ranked_rigidez) == len(ranked_aco), "Vetor p_ridizes e p_aco com tamanhos diferentes, mutation_function"
+    assert len(crossover_rigidez) == len(crossover_aco), "Vetor crossover_rigidez e crossover_aco com tamanhos diferentes, mutation_function"
+    
+    #concatenate both arrays
+    solutions_rigidez = []
+    for i in range(len(ranked_rigidez)+len(crossover_rigidez)):
+        if i < len(ranked_rigidez):
+            solutions_rigidez.append(ranked_rigidez[i])
+        else:
+            solutions_rigidez.append(crossover_rigidez[i-len(ranked_rigidez)])
+    solutions_aco = []
+    for i in range(len(ranked_aco)+len(crossover_aco)):
+        if i < len(ranked_aco):
+            solutions_aco.append(ranked_aco[i])
+        else:
+            solutions_aco.append(crossover_aco[i-len(ranked_aco)])
+   
+   
+    for _ in range(generation_size-10):
+        one_rigidez = []
+        one_aco = []
+        #dado o vector concatenado solutions, o valor de i que é quem vai escolher o individuo a ser mutado para criar um novo, 
+        # será em média, 50% das vezes a primeira metade do vector (ranked_rigidez) que é quem tem as melhores soluções 
+        # da generação antiga, tendendo a escolher o melhor através da expovariete e 50% totalmente randomico dos que receberem crossover (cruzamento)
+        best_or_crossver = random.randint(0, 1)
+        if(best_or_crossver == 1):
+            i = expovariate(len(ranked_rigidez))#escolhendo uma das melhores amostrar (metodo antigo)
+        else:
+            i = random.randint(0, len(crossover_rigidez)-1)+len(ranked_rigidez)
+        #------------------------------------------------------------------------------------------
+        signal = [-1, 1]
         
         for j in range(len(solutions_aco[0])):
             new_lenght_aco = select_thickness(aco_options_mm)[0]
@@ -495,7 +584,7 @@ rigidez, aco = generate_new_solution(generation_size_)
 #parameters         [L,C,tmola,Eepdm],  [L,C,taco], [Hz, Hz, Hz, Hz, Hz],   limit_generation,   generation_size
 undone = selection_function  (rigidez,           aco,        frequency_target,       limit_generation_,                generation_size_)
 if chart_on:
-    plt.savefig('final_select_pressure_result_global.png', dpi=300)
+    plt.savefig('final_select_pressure_result_local.png', dpi=300)
 
 if(undone):
     print("Preparing to rerun")
@@ -503,6 +592,6 @@ if(undone):
     # for _ in range(5):
     #     print(".")
     #     time.sleep(0.6)
-    #os.execv(sys.executable, ['python3'] + sys.argv)
+    os.execv(sys.executable, ['python3'] + sys.argv)
 
 print("--------------------End--------------------")

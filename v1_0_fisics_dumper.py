@@ -1,7 +1,6 @@
 import numpy as np
 from numpy import linalg as LA
 
-
 L = 0.49 #comprimento
 C = 0.050 #largura
 Et      = 3.5e6#elasticidade tapete

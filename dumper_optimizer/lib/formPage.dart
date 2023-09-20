@@ -171,6 +171,7 @@ class _FormPageState extends State<FormPage> {
   Widget build(BuildContext context) {
 
 
+    // print("formPage");
     // print("massDensity: ${dumper.massDensity}");
     // print("springDensity: ${dumper.springDensity}");
     final currentWidth = MediaQuery.of(context).size.width;
@@ -851,12 +852,12 @@ class _FormPageState extends State<FormPage> {
                                        */
                                       setState((){
                                         dumper.count = 0;
-                                        Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                                builder: (_) => HomePage(dumper: dumper)
-                                            ));
                                       });
+                                      Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) => HomePage(dumper: dumper)
+                                          ));
                                     }
                                     // setState(){
                                     // }

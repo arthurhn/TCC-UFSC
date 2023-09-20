@@ -9,7 +9,8 @@ import 'formPage.dart';
 void main(){
   runApp(MyApp());
   doWhenWindowReady(() {
-    var initialSize = Size(1280, 720);
+    // var initialSize = Size(1280, 720);
+    var initialSize = Size(1150, 650);
     appWindow.size = initialSize;
     appWindow.minSize = Size(700, 650);
     appWindow.show();

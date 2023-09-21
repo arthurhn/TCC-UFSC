@@ -12,11 +12,12 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:core';
 
-const LIMIT_GENERATIONS = 5000;
-const GENERATION_SIZE = 1000;
+const LIMIT_GENERATIONS = 1000;
+const GENERATION_SIZE = 300;
 const STATUS_IN_PROCESS = 0;
 const STATUS_FINISHED = 1;
 const STATUS_ERROR2 = 2; //range de solução muito limitada, não consegue criar individuos válidos o suficiente
+const STATUS_ERROR3 = 3; //falha no generate_new_solution ou ou algum momento o rankedsolutions foi apagado ou seja, rankedsolutions = []
 
 class HomePage extends StatefulWidget {
   Dumper dumper;
@@ -37,16 +38,16 @@ class _HomePageState extends State<HomePage> {
   int currentExecutionTime = 0; //microseconds
   double averageExecutionTime = 0.0;//averageTime (microseconds) for each generation
   List<Individual> rankedsolutions = [];
+  List<Individual> allsolutions = [];
   List<Individual> crossoversolutions = [];
   int algorithm_status = 0;
+  double current_select_pressure=0.0;
 
   @override
   void initState(){
     super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
 
-    _timer = Timer.periodic(const Duration(milliseconds: 1), (timer) {
-
-      // print("len: ${rankedsolutions.length}");
       //inicio do algoritmo genetico
 
       //condição de parada, seja: o botão de parada, algum erro, seja ele por limite de tempo
@@ -65,51 +66,39 @@ class _HomePageState extends State<HomePage> {
           }
         }
 
-        // print("------------------------------start----------------------------------");
-        // print("len ran: ${rankedsolutions.length}");
-        // for(int i=0;i<rankedsolutions.length; i++){
-        //   print("ran-antes accuracy: ${rankedsolutions[i].accuracy}, weight: ${rankedsolutions[i].weight}");
-        //   // print("ran-antes accuracy: ${rankedsolutions[i].accuracy}, weight: ${rankedsolutions[i].weight}, \nrigidez: ${rankedsolutions[i].rigidez}, aco: ${rankedsolutions[i].aco}");
-        //
-        // }
-
         setState(() {
-          var sel = selection_function(List<Individual>.from(rankedsolutions), dumper.freq, dumper, LIMIT_GENERATIONS, GENERATION_SIZE);
+          var sel = selection_function(rankedsolutions, dumper.freq, dumper, LIMIT_GENERATIONS, GENERATION_SIZE);
           rankedsolutions = sel[0] as List<Individual>;
           algorithm_status = sel[1] as int;
+          allsolutions = sel[2] as List<Individual>;
+
+          current_select_pressure = select_pressure(allsolutions);
+
           List<Individual> clone_ranked = [];
           for(int i=0;i<rankedsolutions.length; i++){
             clone_ranked.add(Individual.from(rankedsolutions[i]));
           }
           crossoversolutions = crossover_function(clone_ranked, dumper);
-        });
-
-
-        // print("len ran: ${rankedsolutions.length}");
-        // for(int i=0;i<rankedsolutions.length; i++){
-        //   print("ran-depois accuracy: ${rankedsolutions[i].accuracy}, weight: ${rankedsolutions[i].weight}");
-        //   // print("ran-depois accuracy: ${rankedsolutions[i].accuracy}, weight: ${rankedsolutions[i].weight}, \nrigidez: ${rankedsolutions[i].rigidez}, aco: ${rankedsolutions[i].aco}");
-        // }
-
-        // print("cros len: ${crossoversolutions.length}");
-        // for(int i=0;i<crossoversolutions.length; i++){
-        //   print("cro- accuracy: ${crossoversolutions[i].accuracy}, weight: ${crossoversolutions[i].weight}");
-        // }
-
-        setState(() {
           for(int i=0;i<crossoversolutions.length; i++){
-            rankedsolutions.add(Individual.from(crossoversolutions[i]));
+            if(!individual_on_list(crossoversolutions[i], rankedsolutions)){
+              rankedsolutions.add(Individual.from(crossoversolutions[i]));
+            }
           }
         });
-        List<Individual> mutation = mutation_function(rankedsolutions, GENERATION_SIZE, dumper);
+
+        List<Individual> clone_ranked2 = [];
+        for(int i=0;i<rankedsolutions.length; i++){
+          clone_ranked2.add(Individual.from(rankedsolutions[i]));
+        }
+        List<Individual> mutation = mutation_function(clone_ranked2, GENERATION_SIZE, dumper);
         setState(() {
           rankedsolutions = [];//erase all population
           for(int i=0;i<mutation.length; i++){
-            rankedsolutions.add(Individual.from(mutation[i]));
+            if(!individual_on_list(mutation[i], rankedsolutions)){
+              rankedsolutions.add(Individual.from(mutation[i]));
+            }
           }
         });
-
-
 
         //finalizando
         setState(() {
@@ -126,18 +115,19 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-
-
   Widget build(BuildContext context) {
 
     var currentWidth = MediaQuery.of(context).size.width;
     var currentHeight = MediaQuery.of(context).size.height;
     if(dumper.count == 0){
-      // teste da main function
-      // var aux = parametros([12.0/1000, 7.0/1000, 3.0/1000, 2.0/1000, 2.0/1000], [3.0/1000, 3.0/1000, 3.0/1000, 15.0/1000, 3.0/1000], dumper);
-      // var rigidez = aux[0];
-      // var aco = aux[1];
-      // freq = main_dumper_freq(aco, rigidez, dumper);
+      generation=0;
+      startTime = DateTime.now();
+      currentTime = DateTime.now();
+      currentExecutionTime = 0; //microseconds
+      averageExecutionTime = 0.0;//averageTime (microseconds) for each generation
+      rankedsolutions = [];
+      crossoversolutions = [];
+      algorithm_status = 0;
 
       dumper.count++;
     }
@@ -173,10 +163,6 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Row(
                       children: [
-                        Padding(
-                            padding: EdgeInsets.only(top: 4),
-                            child: Image.asset('images/app_logo4.1.png'),
-                        ),
                         IconButton(
                           padding: EdgeInsets.all(5),
                           constraints: BoxConstraints(),
@@ -184,6 +170,7 @@ class _HomePageState extends State<HomePage> {
                           onPressed: (){
                             setState((){
                               dumper.count = 0;
+                              algorithm_status = STATUS_FINISHED;
                               Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -191,6 +178,10 @@ class _HomePageState extends State<HomePage> {
                                   ));
                             });
                           },
+                        ),
+                        Padding(
+                          padding: EdgeInsets.only(top: 5.5),
+                          child: Image.asset('images/app_logo4.1.png'),
                         ),
                       ]),
                   Expanded(child: MoveWindow()),
@@ -217,24 +208,27 @@ class _HomePageState extends State<HomePage> {
                   ),
                   Padding(
                     padding: const EdgeInsets.only(top: 15.0),
-                    child: Text('Count: $generation', style: TextStyle(color: Colors.white),),
+                    child: Text('Generations: $generation', style: TextStyle(color: Colors.white),),
                   ),
                   Column(children: [
                     for(int i=0; i<3;i++)
                       Padding(
                         padding: const EdgeInsets.all(5.0),
-                        child: Text(rankedsolutions.length < 3 ? 'Vazio' : 'individual[$i]: accuracy: ${(rankedsolutions[i].accuracy).toStringAsFixed(2)}, weight: ${(rankedsolutions[i].weight).toStringAsFixed(2)} Kg, aco = [${(rankedsolutions[i].aco[0][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[1][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[2][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[3][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[4][2]*1000).toStringAsFixed(1)}]', style: TextStyle(color: Colors.white),),
+                        child: Text(rankedsolutions.length < 3 ? 'Vazio' : 'individual[$i] - accuracy: ${(rankedsolutions[i].accuracy).toStringAsFixed(2)}, weight: ${(rankedsolutions[i].weight).toStringAsFixed(2)} Kg, aco = [${(rankedsolutions[i].aco[0][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[1][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[2][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[3][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[4][2]*1000).toStringAsFixed(1)}], borracha = [${(rankedsolutions[i].rigidez[0][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[1][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[2][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[3][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[4][2]*1000).toStringAsFixed(1)}]', style: TextStyle(color: Colors.white),),
                       ),
                   ],
                   ),
-
+                  Padding(
+                    padding: const EdgeInsets.only(top: 0.0),
+                    child: Text('Select_pressure: ${current_select_pressure.toStringAsFixed(3)}', style: TextStyle(color: Colors.white),),
+                  ),
                   Padding(
                     padding: const EdgeInsets.only(top: 15.0),
                     child: Text('Tempo de execução: ${printTimeFromMicroseconds(currentExecutionTime)}', style: TextStyle(color: Colors.white),),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(top: 15.0),
-                    child: Text('Tempo de execução média de uma geração: ${printTimeFromMicroseconds(averageExecutionTime.toInt())}', style: TextStyle(color: Colors.white),),
+                    child: Text('Tempo de execução média de uma geração: ${(averageExecutionTime/1000).toStringAsFixed(0)}ms', style: TextStyle(color: Colors.white),),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(top: 15.0),
@@ -242,7 +236,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-            )
+            ),
           ]
         ),
       )

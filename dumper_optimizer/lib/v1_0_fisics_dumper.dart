@@ -155,8 +155,6 @@ double weight_calculate(List<List<double>> aco, List<List<double>> rigidez, Dump
   for(int i=0; i<aco.length;i++){
     volume_aco.add(aco[i][2]*(arg.lenght) *(arg.width));
   }
-  // print("aco no weight: $aco");
-  // print("rigidez no weight: $rigidez");
   List<double> volume_rigidez = [];
   for(int i=0; i<rigidez.length;i++){
     volume_rigidez.add(rigidez[i][2]*(arg.lenght) *(arg.width));

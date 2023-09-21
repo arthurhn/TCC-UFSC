@@ -81,8 +81,6 @@ int count_usefull_solution(List<Individual> population){
   return usefull_solutions;
 }
 Individual rate_individual(Individual ind, Dumper arg){
-  // print("aco: ${ind.aco}");
-  // print("rigidez: ${ind.rigidez}");
   List<Object> fit = fitness(ind.aco, ind.rigidez, arg.freq, arg);
   ind.accuracy = fit[0] as double;
   ind.vector_errors = fit[1] as List<double>;
@@ -90,14 +88,26 @@ Individual rate_individual(Individual ind, Dumper arg){
   return ind;
 }
 bool individual_on_list(Individual ind, List<Individual> population){
-  bool on_list = false;
+
+  if(population.isEmpty){
+    return false;
+  }
   for(int i=0; i<population.length;i++){
-    if(population[i].accuracy == ind.accuracy && population[i].weight == ind.weight){
-      on_list = true;
-      return on_list;
+    int aco_count = 0;
+    int rigidez_count = 0;
+    for(int j=0; j<5;j++){
+      if(population[i].rigidez[j][2] == ind.rigidez[j][2]){
+        rigidez_count++;
+      }
+      if(population[i].aco[j][2] == ind.aco[j][2]){
+        aco_count++;
+      }
+    }
+    if(aco_count == 5 && rigidez_count == 5){
+      return true;
     }
   }
-  return on_list;
+  return false;
 }
 
 List<Object> fitness(List<List<double>> aco, List<List<double>> rigidez, List<double> correct_ans, Dumper arg) {
@@ -171,16 +181,19 @@ List<Individual> generate_new_solution(int generation_size, Dumper arg){
 //em outras palavras, é ele que vai dar o status de sucesso
 List<Object> selection_function(List<Individual> population, List<double> correct_ans, Dumper arg, int limit_generations, int generation_size){
   List<Individual> rankedsolutions = [];
+  List<Individual> allsolutions = [];
   int selection_status = STATUS_IN_PROCESS;
-  if(population.length == 0){
-    // print("foi passada uma população vazia para selection");
-    return [rankedsolutions, selection_status];
+  if(population.isEmpty){
+    print("select_function: STATUS_ERROR3");
+    selection_status = STATUS_ERROR3;
+    return [rankedsolutions, selection_status, allsolutions];
   }
 
 
-  //avaliando a população, preciso fazer isso pq na primeira iteração por exemplo a precisão não esta definida, e nem pode pq n sabe o freq_target
+  //avaliando a população e colocando o weight, preciso fazer isso pq na primeira iteração por exemplo a precisão não esta definida, e nem pode pq n sabe o freq_target
   for(int i=0; i<population.length;i++){
     population[i] = rate_individual(population[i], arg);
+    population[i].weight = weight_calculate(population[i].aco, population[i].rigidez, arg);
   }
 
   int usefull_solutions = count_usefull_solution(population);
@@ -217,9 +230,8 @@ List<Object> selection_function(List<Individual> population, List<double> correc
   if(usefull_solutions < 10){
     print("select_function: STATUS_ERROR2");
     selection_status = STATUS_ERROR2;
-    return [rankedsolutions, selection_status];
+    return [rankedsolutions, selection_status, allsolutions];
   }
-
 
   //-------------------------------------------------------------
 
@@ -237,12 +249,33 @@ List<Object> selection_function(List<Individual> population, List<double> correc
     }
     bool already_exist = individual_on_list(best_from_population, rankedsolutions_sort);
     if(!already_exist){
-      // print("para aqui demonio");
+      // print("não repetido");
       rankedsolutions_sort.add(best_from_population);
+    }else{
+      // print("repetido");
     }
     population.removeAt(position_of_the_best);
   }
+  // print("len sort: ${rankedsolutions_sort.length}");
+  for(int i=0; i<rankedsolutions_sort.length;i++){
+    allsolutions.add(Individual.from(rankedsolutions_sort[i]));
+  }
+
   rankedsolutions_sort = rankedsolutions_sort.take(10).toList();
+
+  // stdout.write("nova gen:\n");
+  // for(int i=0; i<rankedsolutions_sort.length;i++){
+  //   stdout.write("rigidez: [");
+  //   for(int j=0; j<5;j++){
+  //     stdout.write("${rankedsolutions_sort[i].rigidez[j][2]}, ");
+  //   }
+  //   stdout.write("], ");
+  //   stdout.write("aco: [");
+  //   for(int j=0; j<5;j++){
+  //     stdout.write("${rankedsolutions_sort[i].aco[j][2]}, ");
+  //   }
+  //   stdout.write("]\n");
+  // }
 
   // print("len ran durante: ${rankedsolutions_sort.length} -------------------------------------");
   // for(int i=0;i<rankedsolutions_sort.length; i++){
@@ -250,6 +283,10 @@ List<Object> selection_function(List<Individual> population, List<double> correc
   // }
   // print("durante --------------------------------------------------------");
 
+  if(rankedsolutions_sort.isEmpty){
+    print("select_function: STATUS_ERROR3");
+    return [rankedsolutions, 3, allsolutions];
+  }
   List<double> _best_error = rankedsolutions_sort[0].vector_errors;
 
   var best_error = List.of(_best_error);
@@ -258,10 +295,10 @@ List<Object> selection_function(List<Individual> population, List<double> correc
   }
 
   if  (best_error[0] < arg.freq_error[0] && best_error[1] < arg.freq_error[1] && best_error[2] < arg.freq_error[2] && best_error[3] < arg.freq_error[3] && best_error[4] < arg.freq_error[4]){
-    return [rankedsolutions_sort, STATUS_FINISHED];
+    return [rankedsolutions_sort, STATUS_FINISHED, allsolutions];
   }
 
-  List<Object> return_answer = [rankedsolutions_sort, STATUS_IN_PROCESS];
+  List<Object> return_answer = [rankedsolutions_sort, STATUS_IN_PROCESS, allsolutions];
   return return_answer;
 }
 
@@ -314,33 +351,6 @@ List<Individual> crossover_function(List<Individual> topsolutions, Dumper arg){
       }
     }
 
-    // stdout.write("ind.rigidez:");
-    // for(int i=0; i<ind.rigidez.length;i++){
-    //   stdout.write("${ind.rigidez[i][2]},");
-    // }
-    // stdout.write("\n");
-    // stdout.write("ind2.rigidez:");
-    // for(int i=0; i<ind.rigidez.length;i++){
-    //   stdout.write("${ind2.rigidez[i][2]},");
-    // }
-    // stdout.write("\n");
-    // stdout.write("ind.aco:");
-    // for(int i=0; i<ind.aco.length;i++){
-    //   stdout.write("${ind.aco[i][2]},");
-    // }
-    // stdout.write("\n");
-    // stdout.write("ind2.aco:");
-    // for(int i=0; i<ind.aco.length;i++){
-    //   stdout.write("${ind2.aco[i][2]},");
-    // }
-    // stdout.write("\n");
-
-    // crossover_solution.add(ind);
-    ind = rate_individual(ind, arg);
-    // print("cro-novo accuracy: ${ind.accuracy}, weight: ${ind.weight}");
-    // bool ind_on_top_list = individual_on_list(ind, topsolutions);
-    // bool ind_on_top_list2 = individual_on_list(ind, crossover_solution);
-    // print("cro- accuracy: ${ind.accuracy}, weight: ${ind.weight}");
     crossover_solution.add(ind);
   }
   return crossover_solution;
@@ -349,6 +359,10 @@ List<Individual> crossover_function(List<Individual> topsolutions, Dumper arg){
 List<Individual> mutation_function(List<Individual> rankedsolutions, int generation_size, Dumper arg){
   List<Individual> mutation_list = [];
   List<Individual> new_population = [];//list that will return with rankedsolutions + new_population
+
+  if(rankedsolutions.isEmpty){
+    return new_population;
+  }
 
   for(int j=0; j<rankedsolutions.length;j++){
     new_population.add(rankedsolutions[j]);
@@ -435,4 +449,22 @@ List<Individual> mutation_function(List<Individual> rankedsolutions, int generat
   return new_population;
 }
 
-//or List<Objet>
+double select_pressure(List<Individual> population){
+  if(population.length == 0){
+    return 1.0;
+  }
+
+  double ps=0.0;
+  List<double> vector_accuracy = [];
+  Individual best = Individual.from(population[0]);
+  for(int i=0;i<population.length;i++){
+    if(population[i].accuracy != 0){
+      vector_accuracy.add(population[i].accuracy);
+    }
+  }
+  double average_accuracy = vector_accuracy.average();
+  double g0 = 1/best.accuracy;
+  double g = 1/average_accuracy;
+  ps = g0/g;
+  return ps;
+}

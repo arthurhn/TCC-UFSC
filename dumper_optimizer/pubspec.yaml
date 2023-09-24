@@ -39,11 +39,12 @@ dependencies:
   http: ^0.13.5
   window_manager: ^0.3.6
   bitsdojo_window: ^0.1.5
-  syncfusion_flutter_sliders: ^22.2.11
-  syncfusion_flutter_core: ^22.2.11
+  syncfusion_flutter_sliders: ^20.4.54
+  syncfusion_flutter_core: ^20.4.54
   intl: ^0.18.1
   ml_linalg: ^13.11.31
   data: ^0.10.0
+  syncfusion_flutter_charts: ^20.4.54
 
 dev_dependencies:
   flutter_test:

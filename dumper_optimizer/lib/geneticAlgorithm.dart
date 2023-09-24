@@ -179,7 +179,7 @@ List<Individual> generate_new_solution(int generation_size, Dumper arg){
 //a ideia aqui é um pouco diferente do que acontece no python, aqui já recebemos os individuos como um objeto,
 //logo, ele apenas seleciona e retorna os 10 melhores em ordem e retorna o status do algoritmo, é ele quem vai dizer se um individuo atende os requisitos ou não
 //em outras palavras, é ele que vai dar o status de sucesso
-List<Object> selection_function(List<Individual> population, List<double> correct_ans, Dumper arg, int limit_generations, int generation_size){
+List<Object> selection_function(List<Individual> population, List<double> correct_ans, Dumper arg, int limit_generations, int generation_size)      {
   List<Individual> rankedsolutions = [];
   List<Individual> allsolutions = [];
   int selection_status = STATUS_IN_PROCESS;
@@ -201,7 +201,7 @@ List<Object> selection_function(List<Individual> population, List<double> correc
   int generateTimes = 0;
   // verificando se há soluções que atendem aos requisitos
   while(usefull_solutions < 10 && generateTimes < 1000){
-    print("teve q entrar no while do usefull (selection)");
+    // print("teve q entrar no while do usefull (selection)");
     generateTimes++;//limitador só pra ele n ficar travando o código, mas em teoria que q tirar, eu colocar um valor mt alto pra caso ele chegue aqui, o status retone um warning
 
     // Individual old_individual = population[0];//salvando individuo que vai ser excluido
@@ -295,7 +295,7 @@ List<Object> selection_function(List<Individual> population, List<double> correc
   }
 
   if  (best_error[0] < arg.freq_error[0] && best_error[1] < arg.freq_error[1] && best_error[2] < arg.freq_error[2] && best_error[3] < arg.freq_error[3] && best_error[4] < arg.freq_error[4]){
-    return [rankedsolutions_sort, STATUS_FINISHED, allsolutions];
+    return [rankedsolutions_sort, STATUS_SUCESSFULL, allsolutions];
   }
 
   List<Object> return_answer = [rankedsolutions_sort, STATUS_IN_PROCESS, allsolutions];

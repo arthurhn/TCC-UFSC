@@ -357,11 +357,14 @@ class _FormPageState extends State<FormPage> {
         child: Column(
           children: [
             WindowTitleBarBox(
-              child: Row(
-                children: [
-                  Expanded(child: MoveWindow()),
-                  const WindowButtons()
-                ],
+              child: Container(
+                color: Color(0xff1c1c31),
+                child: Row(
+                  children: [
+                    Expanded(child: MoveWindow()),
+                    const WindowButtons()
+                  ],
+                ),
               ),
             ),
             Column(

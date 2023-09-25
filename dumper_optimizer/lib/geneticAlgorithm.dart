@@ -1,10 +1,7 @@
 import 'dart:math';
 import 'dart:core';
-import 'dart:io';
 import 'package:data/data.dart';
 import 'package:dumper_optimizer/home.dart';
-
-
 import 'v1_0_fisics_dumper.dart';
 
 class Individual{
@@ -41,9 +38,6 @@ class Individual{
         List<double>.from(objectA.vector_errors), List<double>.from(objectA.vector_ans), genesis_rigidez_mm,
         genesis_aco_mm, objectA.weight);
   }
-
-  // Individual.clone(Individual individual): this(individual.accuracy, individual.rigidez, individual.aco,
-  // individual.vector_errors, individual.vector_ans, individual.genesis_rigidez_mm, individual.genesis_aco_mm, individual.weight);
 
   Individual(this.accuracy, this.rigidez, this.aco, this.vector_errors, this.vector_ans, this.genesis_rigidez_mm, this.genesis_aco_mm, this.weight);
 }
@@ -112,9 +106,6 @@ bool individual_on_list(Individual ind, List<Individual> population){
 
 List<Object> fitness(List<List<double>> aco, List<List<double>> rigidez, List<double> correct_ans, Dumper arg) {
   double error = 0;
-  //Limitation of weight values part
-  // print("aco2: $aco");
-  // print("rigidez2: $rigidez");
   double total_weight = weight_calculate(aco, rigidez, arg);
   if (total_weight < arg.min_weight || total_weight > arg.max_weight){
     error = pow(10.0, 10) as double;
@@ -172,7 +163,6 @@ List<Individual> generate_new_solution(int generation_size, Dumper arg){
     //pode adicionar já que ele passou pelo while, logo não é repetido
     first_generation.add(ind);
   }
-  // print("return1");
   return first_generation;
 }
 
@@ -201,14 +191,12 @@ List<Object> selection_function(List<Individual> population, List<double> correc
   int generateTimes = 0;
   // verificando se há soluções que atendem aos requisitos
   while(usefull_solutions < 10 && generateTimes < 1000){
-    // print("teve q entrar no while do usefull (selection)");
     generateTimes++;//limitador só pra ele n ficar travando o código, mas em teoria que q tirar, eu colocar um valor mt alto pra caso ele chegue aqui, o status retone um warning
 
     // Individual old_individual = population[0];//salvando individuo que vai ser excluido
     //as próximas linhas de código é ele tirando um individuo que não se adaquava nos requisitos e adicionando um novo aleatório
     for(int i=0; i<population.length;i++){
       if(population[i].accuracy == 0){
-        // old_individual = population[i];
         population.removeAt(i);
         break;
       }
@@ -221,9 +209,6 @@ List<Object> selection_function(List<Individual> population, List<double> correc
     if(!previus_exists){
       population.add(new_individual);
     }
-    // else{
-    //   population.add(old_individual);
-    // }
 
     usefull_solutions = count_usefull_solution(population);
   }
@@ -249,39 +234,16 @@ List<Object> selection_function(List<Individual> population, List<double> correc
     }
     bool already_exist = individual_on_list(best_from_population, rankedsolutions_sort);
     if(!already_exist){
-      // print("não repetido");
       rankedsolutions_sort.add(best_from_population);
     }else{
-      // print("repetido");
     }
     population.removeAt(position_of_the_best);
   }
-  // print("len sort: ${rankedsolutions_sort.length}");
   for(int i=0; i<rankedsolutions_sort.length;i++){
     allsolutions.add(Individual.from(rankedsolutions_sort[i]));
   }
 
   rankedsolutions_sort = rankedsolutions_sort.take(10).toList();
-
-  // stdout.write("nova gen:\n");
-  // for(int i=0; i<rankedsolutions_sort.length;i++){
-  //   stdout.write("rigidez: [");
-  //   for(int j=0; j<5;j++){
-  //     stdout.write("${rankedsolutions_sort[i].rigidez[j][2]}, ");
-  //   }
-  //   stdout.write("], ");
-  //   stdout.write("aco: [");
-  //   for(int j=0; j<5;j++){
-  //     stdout.write("${rankedsolutions_sort[i].aco[j][2]}, ");
-  //   }
-  //   stdout.write("]\n");
-  // }
-
-  // print("len ran durante: ${rankedsolutions_sort.length} -------------------------------------");
-  // for(int i=0;i<rankedsolutions_sort.length; i++){
-  //   print("ran-durante accuracy: ${rankedsolutions_sort[i].accuracy}, weight: ${rankedsolutions_sort[i].weight}, \nrigidez: ${rankedsolutions_sort[i].rigidez}, aco: ${rankedsolutions_sort[i].aco}");
-  // }
-  // print("durante --------------------------------------------------------");
 
   if(rankedsolutions_sort.isEmpty){
     print("select_function: STATUS_ERROR3");
@@ -320,8 +282,6 @@ List<Individual> crossover_function(List<Individual> topsolutions, Dumper arg){
     //selecting both solution to compare
     Individual ind = topsolutions[chosen_position]; //solution that will be add to crossover_solution
     Individual ind2 = topsolutions[chosen_position2];
-
-    // print("who_is_change: $who_is_change, how_many_try_changes: $how_many_try_changes");
 
     if(who_is_change == 0){
       for(int i=0; i<how_many_try_changes;i++){
@@ -412,33 +372,6 @@ List<Individual> mutation_function(List<Individual> rankedsolutions, int generat
         new_individual.genesis_aco_mm[change_position] = aux_aco[1] as List<double>;
       }
     }
-
-    //just for print
-    // List<double> aco_original = [];
-    // List<double> aco_copy = [];
-    // for(int j=0; j<5;j++){
-    //   aco_original.add(rankedsolutions[i].aco[j][2]);
-    //   aco_copy.add(new_individual.aco[j][2]);
-    // }
-    // List<double> rigidez_original = [];
-    // List<double> rigidez_copy = [];
-    // for(int j=0; j<5;j++){
-    //   rigidez_original.add(rankedsolutions[i].rigidez[j][2]);
-    //   rigidez_copy.add(new_individual.rigidez[j][2]);
-    // }
-    // print("rigidez_original: $rigidez_original, rigidez_copy: $rigidez_copy");
-    // print("aco_original: $aco_original, aco_copy: $aco_copy");
-
-    // #rigidez changed
-    // for j in range(len(solutions_rigidez[0])):
-    //   new_lenght_rigidez = select_thickness(rigidez_options_mm)[0]
-    //   # new_lenght_rigidez = abs(solutions_rigidez[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
-    //   while new_lenght_rigidez < 0.000001:
-    //     new_lenght_rigidez = select_thickness(rigidez_options_mm)[0]
-    //     # new_lenght_rigidez = abs(solutions_rigidez[i][j] + signal[random.randint(0, 1)] * (discrete_value * random.randint(0, 3)))
-    //   one_rigidez.append(round(new_lenght_rigidez, 6)) #current number +- 0.001 or 0.002 ....
-    // #aco doesnt change
-    // one_aco = [solutions_aco[i][j] for j in range(len(solutions_aco[i]))]
 
     mutation_list.add(new_individual);
   }

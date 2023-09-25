@@ -173,9 +173,6 @@ double weight_calculate(List<List<double>> aco, List<List<double>> rigidez, Dump
 
 List<double> main_dumper_freq(List<List<double>> aco, List<List<double>> rigidez, Dumper arg){
 
-  // print("main");
-  // print(aco);
-  // print(rigidez);
   List<double> f = freq(criaMatrizes(calculaRigMass(aco, rigidez, arg)));
   return f;
 }

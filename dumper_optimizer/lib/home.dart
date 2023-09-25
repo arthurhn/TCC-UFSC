@@ -15,7 +15,7 @@ import 'dart:core';
 
 const LIMIT_GENERATIONS = 500;
 const GENERATION_SIZE = 150;
-const VIEW_INTERVAL = 150;
+const VIEW_INTERVAL = 100;
 const STATUS_IN_PROCESS = 0;
 const STATUS_SUCESSFULL = 1;//when reachs the errors targets
 const STATUS_FINISHED = 2;//when reach the limit generation
@@ -67,19 +67,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
   /// Specifies the list of chart sample data.
   List<GraphData> chartBestAccuray_RT = <GraphData>[];
   List<GraphData> chartBestAccuray_RT_on_pause = <GraphData>[];
+  List<GraphData> chartSelectPressure_RT = <GraphData>[];
+  List<GraphData> chartSelectPressure_RT_on_pause = <GraphData>[];
   List<GraphData> chartBestAccuray = <GraphData>[];
-  double minViewChart = 0;
-  double maxViewChart = VIEW_INTERVAL.toDouble();
+  String select_chart = 'accuracy';
+  // double minViewChart = 0;
+  // double maxViewChart = VIEW_INTERVAL.toDouble();
   final Random random = Random();
-  final TooltipBehavior _tooltipBehavior = TooltipBehavior(
-      enable: true,
-      borderColor: Colors.white,
-      borderWidth: 2);
+  // final TooltipBehavior _tooltipBehavior = TooltipBehavior(
+  //     enable: true,
+  //     borderColor: Colors.white,
+  //     borderWidth: 2);
   @override
   void initState(){
     super.initState();
     tabController=TabController(length: 3, vsync: this);
-    _timer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if(algorithm_status == STATUS_PAUSE){
         setState(() {
           currentPauseTime = totalTime-currentExecutionTime;
@@ -167,16 +170,151 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
       if(rankedsolutions.length != 0 && algorithm_status == STATUS_IN_PROCESS && generation < LIMIT_GENERATIONS){
         setState(() {
           chartBestAccuray_RT_on_pause.add(GraphData(generation.toDouble(), rankedsolutions[0].accuracy));
-          chartBestAccuray_RT.add(GraphData(generation.toDouble(), rankedsolutions[0].accuracy+20));
+          chartBestAccuray_RT.add(GraphData(generation.toDouble(), rankedsolutions[0].accuracy));
+
+          chartSelectPressure_RT_on_pause.add(GraphData(generation.toDouble(), current_select_pressure));
+          chartSelectPressure_RT.add(GraphData(generation.toDouble(), current_select_pressure));
+
           chartBestAccuray.add(GraphData(generation.toDouble(), rankedsolutions[0].accuracy));
-          if(chartBestAccuray_RT.length > VIEW_INTERVAL){
+          if(generation > VIEW_INTERVAL){
             chartBestAccuray_RT.removeAt(0);
+            chartSelectPressure_RT.removeAt(0);
           }
         });
       }
       //fim do algoritmo genetico
 
     });
+  }
+
+  Widget SelectChart(String select, double current_width, double current_height, bool isCorner){
+    if(select == 'accuracy'){
+      return Container(
+         margin: !isCorner ? EdgeInsets.only(left: 20.0, right: 20) : EdgeInsets.only(left: 10, right: 10),
+         height: !isCorner ? current_height*0.55 : 80,
+         child: SfCartesianChart(
+           title: ChartTitle(
+               text: !isCorner ? 'Geração x Precisão' : 'Precisão',
+               textStyle: TextStyle(
+                 color: Colors.white,
+                 fontFamily: 'Roboto',
+                 fontStyle: FontStyle.italic,
+                 fontSize: !isCorner ? 14 : 10,
+               )
+           ),
+           // tooltipBehavior: !isCorner ? _tooltipBehavior : null,
+           margin: const EdgeInsets.only(top: 10, right: 10),
+           zoomPanBehavior: !isCorner ? ZoomPanBehavior(
+             enablePanning: true,
+             enableMouseWheelZooming: true,
+             enablePinching: true,
+           ) :  null,
+           primaryXAxis: NumericAxis(
+             interval: 50,
+             decimalPlaces: 0,
+             title: !isCorner ? AxisTitle(
+                 text: 'Geração',
+                 textStyle: const TextStyle(
+                     color: Colors.white,
+                     fontFamily: 'Roboto',
+                     fontSize: 16,
+                     fontStyle: FontStyle.italic,
+                     fontWeight: FontWeight.w300
+                 )
+             ) : null,
+             isVisible: !isCorner ? true : false,
+           ),
+           primaryYAxis: NumericAxis(
+             interval: 10,
+             title: !isCorner ? AxisTitle(
+                 text: 'Precisão',
+                 textStyle: const TextStyle(
+                     color: Colors.white,
+                     fontFamily: 'Roboto',
+                     fontSize: 16,
+                     fontStyle: FontStyle.italic,
+                     fontWeight: FontWeight.w300
+                 )
+           ) : null,
+             isVisible: !isCorner ? true : false,
+           ),
+           series: <LineSeries<GraphData, num>>[
+             LineSeries<GraphData, num>(
+               dataSource: algorithm_status == STATUS_IN_PROCESS ? chartBestAccuray_RT : chartBestAccuray_RT_on_pause,
+               // gradient: _linearGradient,
+               color: Colors.red,
+               width: 3,
+               xValueMapper: (GraphData data, _) => data.x,
+               yValueMapper: (GraphData data, _) => data.y,
+             ),
+           ],
+         ),
+       );
+    }else if (select == 'select_pressure'){
+      return Container(
+        margin: !isCorner ? EdgeInsets.only(left: 20.0, right: 20) : EdgeInsets.only(left: 10, right: 10),
+        height: !isCorner ? current_height*0.55 : 80,
+        child: SfCartesianChart(
+          title: ChartTitle(
+            text: !isCorner ? 'Geração x Select Pressure' : 'Select Pressure',
+            textStyle: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Roboto',
+              fontStyle: FontStyle.italic,
+              fontSize: !isCorner ? 14 : 10,
+            )
+          ),
+          // tooltipBehavior: !isCorner ? _tooltipBehavior : null,
+          margin: const EdgeInsets.only(top: 10, right: 10),
+          zoomPanBehavior: !isCorner ? ZoomPanBehavior(
+            enablePanning: true,
+            enableMouseWheelZooming: true,
+            enablePinching: true,
+          ) :  null,
+          primaryXAxis: NumericAxis(
+            interval: 50,
+            decimalPlaces: 0,
+            title: !isCorner ? AxisTitle(
+                text: 'Geração',
+                textStyle: const TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Roboto',
+                    fontSize: 16,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w300
+                )
+            ) : null,
+            isVisible: !isCorner ? true : false,
+          ),
+          primaryYAxis: NumericAxis(
+            title: !isCorner ? AxisTitle(
+                text: 'Select Pressure',
+                textStyle: const TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Roboto',
+                    fontSize: 16,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w300
+                )
+            ) : null,
+            isVisible: !isCorner ? true : false,
+          ),
+          // enableAxisAnimation: false,
+          series: <LineSeries<GraphData, num>>[
+            LineSeries<GraphData, num>(
+              dataSource: algorithm_status == STATUS_IN_PROCESS ? chartSelectPressure_RT : chartSelectPressure_RT_on_pause,
+              // gradient: _linearGradient,
+              color: Colors.blue,
+              width: 3,
+              xValueMapper: (GraphData data, _) => data.x,
+              yValueMapper: (GraphData data, _) => data.y,
+
+            ),
+          ],
+        ),
+      );
+    }
+    return Container();
   }
 
   Widget MainPage(double current_width, double current_height){
@@ -202,12 +340,68 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.decelerate,
-                  // color: Color(0xff1c1c30),
-                  width: side_left_menu_is_visible ? current_width*0.15 : 0,
-                  // color: Colors.red,
+                  width: side_left_menu_is_visible ? current_width*0.18 : 0,
                   child: Visibility(
                       visible: side_left_menu_is_visible,
-                      child: Text('width: ${current_width*0.2}', style: TextStyle(color: Colors.white),)
+                      child: Column(
+                        children: [
+                          Container(
+                            height: 85,
+                            margin: EdgeInsets.only(left: 8, right: 8),
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                elevation: 5,
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent.withOpacity(0.1),
+                                side: const BorderSide(
+                                  width: 2,
+                                  color: Colors.grey,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: IgnorePointer(
+                                child: SelectChart('accuracy', current_width, current_height, true),
+                              ),
+                              onPressed: () {
+                                print('accuracy');
+                                setState(() {
+                                  select_chart = 'accuracy';
+                                });
+                              },
+                            ),
+                          ),
+                          SizedBox(height: 4,),
+                          Container(
+                            height: 85,
+                            margin: EdgeInsets.only(left: 8, right: 8),
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                elevation: 5,
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent.withOpacity(0.1),
+                                side: const BorderSide(
+                                  width: 2,
+                                  color: Colors.grey,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: IgnorePointer(
+                                child: SelectChart('select_pressure', current_width, current_height, true),
+                              ),
+                              onPressed: () {
+                                print('select_pressure');
+                                setState(() {
+                                  select_chart = 'select_pressure';
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      )
                   ),
                 ),
               ],
@@ -223,83 +417,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
           child: Column(
             children: [
               SizedBox(height: 25,),
-              Container(
-                margin: const EdgeInsets.only(left: 20.0, right: 20),
-                height: current_height*0.55,
-                child: SfCartesianChart(
-                  title: ChartTitle(
-                    text: 'Geração x Precisão',
-                      textStyle: const TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'Roboto',
-                        fontStyle: FontStyle.italic,
-                        fontSize: 14,
-                      )
-                  ),
-                  tooltipBehavior: _tooltipBehavior,
-                  margin: const EdgeInsets.only(top: 10, right: 10),
-                  zoomPanBehavior: ZoomPanBehavior(
-                    enablePanning: true,
-                    enableMouseWheelZooming: true,
-                    enablePinching: true,
-                  ),
-                  primaryXAxis: NumericAxis(
-                    // visibleMinimum: algorithm_status == STATUS_IN_PROCESS ? null : minViewChart,
-                    // visibleMaximum: algorithm_status == STATUS_IN_PROCESS ? null : maxViewChart,
-                    interval: 50,
-                    decimalPlaces: 0,
-                    title: AxisTitle(
-                        text: 'Geração',
-                        textStyle: const TextStyle(
-                            color: Colors.white,
-                            fontFamily: 'Roboto',
-                            fontSize: 16,
-                            fontStyle: FontStyle.italic,
-                            fontWeight: FontWeight.w300
-                        )
-                    )
-                  ),
-                  primaryYAxis: NumericAxis(
-                    interval: 10,
-                      title: AxisTitle(
-                          text: 'Precisão',
-                          textStyle: const TextStyle(
-                              color: Colors.white,
-                              fontFamily: 'Roboto',
-                              fontSize: 16,
-                              fontStyle: FontStyle.italic,
-                              fontWeight: FontWeight.w300
-                          )
-                      )
-                  ),
-                  series: <LineSeries<GraphData, num>>[
-                    LineSeries<GraphData, num>(
-                      dataSource: algorithm_status == STATUS_IN_PROCESS ? chartBestAccuray_RT : chartBestAccuray_RT_on_pause,
-                      // gradient: _linearGradient,
-                      color: Colors.red,
-                      width: 3,
-                      xValueMapper: (GraphData data, _) => data.x,
-                      yValueMapper: (GraphData data, _) => data.y,
-                    ),
-                  ],
-                ),
-              ),
-              // Padding(
-              //   padding: const EdgeInsets.all(0.0),
-              //   child: Text('Objetivo: ${dumper.freq}', style: TextStyle(color: Colors.white),),
-              // ),
-              // Padding(
-              //   padding: const EdgeInsets.all(0.0),
-              //   child: Text(rankedsolutions.isNotEmpty ? 'Melhor resultado: ${rankedsolutions[0].vector_ans}' : 'Melhor resultado: []', style: TextStyle(color: Colors.white),),
-              // ),
-              // Padding(
-              //   padding: const EdgeInsets.all(15.0),
-              //   child: Text(rankedsolutions.isNotEmpty ? 'Erro: ${rankedsolutions[0].vector_errors}' : 'Erro: []', style: TextStyle(color: Colors.white),),
-              // ),
-              Padding(
-                padding: const EdgeInsets.only(top: 15.0),
-                child: Text('Generations: $generation', style: TextStyle(color: Colors.white),),
-              ),
+              SelectChart(select_chart, current_width, current_height, false),
+              SizedBox(height: 25,),
               Column(children: [
                 for(int i=0; i<3;i++)
                   Padding(
@@ -346,7 +465,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.decelerate,
                   // color: Color(0xff1c1c30),
-                  width: side_right_menu_is_visible ? current_width*0.15 : 0,
+                  width: side_right_menu_is_visible ? current_width*0.2 : 0,
                   // color: Colors.red,
                   child: Visibility(
                       visible: side_right_menu_is_visible,
@@ -365,298 +484,299 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
   Widget build(BuildContext context) {
 
 
-    var currentWidth = MediaQuery.of(context).size.width;
-    var currentHeight = MediaQuery.of(context).size.height;
-    if(dumper.count == 0){
-      generation=0;
-      startTime = DateTime.now();
-      currentTime = DateTime.now();
-      totalTime = 0; //microseconds
-      currentPauseTime = 0; //microseconds
-      currentExecutionTime = 0; //microseconds
-      averageExecutionTime = 0.0;//averageTime (microseconds) for each generation
-      rankedsolutions = [];
-      allsolutions = [];
-      crossoversolutions = [];
-      algorithm_status = 0;
+  var currentWidth = MediaQuery.of(context).size.width;
+  var currentHeight = MediaQuery.of(context).size.height;
+  if(dumper.count == 0){
+    generation=0;
+    startTime = DateTime.now();
+    currentTime = DateTime.now();
+    totalTime = 0; //microseconds
+    currentPauseTime = 0; //microseconds
+    currentExecutionTime = 0; //microseconds
+    averageExecutionTime = 0.0;//averageTime (microseconds) for each generation
+    rankedsolutions = [];
+    allsolutions = [];
+    crossoversolutions = [];
+    algorithm_status = 0;
 
-      dumper.count++;
-    }
+    dumper.count++;
+  }
 
-    if(currentHeight < 650 || currentWidth < 700){
-      return Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-              color: Color(0xff121220)
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Center(
-              child: Text('The app doesn\'t support these sizes of screen \n width: $currentWidth, height: $currentHeight',
-                style: TextStyle(color: Colors.white, fontSize: 30),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
+  if(currentHeight < 650 || currentWidth < 700){
     return Scaffold(
-      body:
-      Container(
+      body: Container(
         decoration: const BoxDecoration(
             color: Color(0xff121220)
         ),
-        child: Column(
-          children: [
-            WindowTitleBarBox(
-              child: Container(
-                color: Color(0xff1c1c31),
-                child: Row(
-                  children: [
-                    Row(
-                        children: [
-                          IconButton(
-                            padding: EdgeInsets.all(5),
+        child: Padding(
+          padding: const EdgeInsets.all(10.0),
+          child: Center(
+            child: Text('The app doesn\'t support these sizes of screen \n width: $currentWidth, height: $currentHeight',
+              style: TextStyle(color: Colors.white, fontSize: 30),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  return Scaffold(
+    body:
+    Container(
+      decoration: const BoxDecoration(
+          color: Color(0xff121220)
+      ),
+      child: Column(
+        children: [
+          WindowTitleBarBox(
+            child: Container(
+              color: Color(0xff1c1c31),
+              child: Row(
+                children: [
+                  Row(
+                      children: [
+                        IconButton(
+                          padding: EdgeInsets.all(5),
+                          constraints: BoxConstraints(),
+                          icon: Icon(Icons.arrow_back, color: Colors.white,),
+                          onPressed: (){
+                            setState((){
+                              dumper.count = 0;
+                              algorithm_status = STATUS_SUCESSFULL;
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => FormPage(dumper: dumper,)
+                                  ));
+                            });
+                          },
+                        ),
+                        Padding(
+                          padding: EdgeInsets.only(top: 5.5),
+                          child: Image.asset('images/app_logo4.1.png'),
+                        ),
+                      ]),
+                  Expanded(child: MoveWindow()),
+                  const WindowButtons()
+                ],
+              ),
+            ),
+          ),
+          Column(children: [
+            Container(height: 0.7, color: Colors.white.withOpacity(0.3),),
+            Container(
+              color: Color(0xff22223a),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SizedBox(width: 125,),
+                  Container(
+                    height: 26,
+                    child: TabBar(
+                      indicator: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        color: Colors.grey.withOpacity(0.15),
+                      ),
+                      controller: tabController,
+                      isScrollable: true,
+                      labelPadding: const EdgeInsets.symmetric(horizontal: 30),
+                      tabs: const [
+                        Tab(child: SizedBox(width: 80, child: Center(child: Text("Principal", style: TextStyle(color: Color(0xff62b5e5),),))),),
+                        Tab(child: SizedBox(width: 80, child: Center(child: Text("Visão Geral", style: TextStyle(color: Color(0xff62b5e5),),))),),
+                        Tab(child: SizedBox(width: 80, child: Center(child: Text("Resultados", style: TextStyle(color: Color(0xff62b5e5),),))),),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    width: 125,
+                    child: Row(
+                      children: [
+                        //botões play/pause/cancel
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 7),
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
                             constraints: BoxConstraints(),
-                            icon: Icon(Icons.arrow_back, color: Colors.white,),
-                            onPressed: (){
-                              setState((){
-                                dumper.count = 0;
-                                algorithm_status = STATUS_SUCESSFULL;
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => FormPage(dumper: dumper,)
-                                    ));
+                            icon: Icon(
+                              Icons.play_arrow,
+                              color: ((){
+                                if(!force_stop && algorithm_status != STATUS_IN_PROCESS){
+                                  return const Color(0xff33ff33);
+                                }else{
+                                  return const Color(0xff006600);
+                                }
+                              }()),
+                            ),
+                            onPressed: () {
+
+                              if(!force_stop && algorithm_status != STATUS_IN_PROCESS){
+                                print("play");
+                                setState(() {
+                                  algorithm_status = STATUS_IN_PROCESS;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 7),
+                          child: IconButton(
+                            hoverColor: Colors.grey.withOpacity(0.15),
+                            padding: EdgeInsets.zero,
+                            constraints: BoxConstraints(),
+                            icon: Icon(
+                              Icons.pause,
+                              color: ((){
+                                if(!force_stop && algorithm_status != STATUS_PAUSE){
+                                  return const Color(0xff1a1aff);
+                                }else{
+                                  return const Color(0xff000066);
+                                }
+                              }()),
+                            ),
+                            onPressed: () {
+                              if(!force_stop && algorithm_status != STATUS_PAUSE){
+                                print("pause");
+                                setState(() {
+                                  // if(generation < VIEW_INTERVAL){
+                                  //   minViewChart = 1;
+                                  //   maxViewChart = generation.toDouble();
+                                  // }else{
+                                  //   minViewChart = (generation-VIEW_INTERVAL).toDouble();
+                                  //   maxViewChart = generation.toDouble();
+                                  // }
+                                  algorithm_status = STATUS_PAUSE;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 7),
+                          child: IconButton(
+                            hoverColor: Colors.grey.withOpacity(0.15),
+                            padding: EdgeInsets.zero,
+                            constraints: BoxConstraints(),
+                            icon: Icon(
+                              Icons.stop,
+                              color: ((){
+                                if(force_stop){
+                                  return const Color(0xff660000);
+                                }else{
+                                  return const Color(0xffFF0000);
+                                }
+                              }()),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                if(!force_stop){
+                                  print("stop");
+                                  setState(() {
+                                    algorithm_status = STATUS_STOP;
+                                    force_stop = true;
+                                  });
+                                }
                               });
                             },
                           ),
-                          Padding(
-                            padding: EdgeInsets.only(top: 5.5),
-                            child: Image.asset('images/app_logo4.1.png'),
-                          ),
-                        ]),
-                    Expanded(child: MoveWindow()),
-                    const WindowButtons()
-                  ],
-                ),
+                        ),
+                      ],
+                    ),
+                  )
+                ],
               ),
             ),
-            Column(children: [
-              Container(height: 0.7, color: Colors.white.withOpacity(0.3),),
-              Container(
-                color: Color(0xff22223a),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    SizedBox(width: 125,),
-                    Container(
-                      height: 26,
-                      child: TabBar(
-                        indicator: BoxDecoration(
-                          borderRadius: BorderRadius.circular(4),
-                          color: Colors.grey.withOpacity(0.15),
-
-                        ),
-                        controller: tabController,
-                        isScrollable: true,
-                        labelPadding: const EdgeInsets.symmetric(horizontal: 30),
-                        tabs: const [
-                          Tab(child: SizedBox(width: 80, child: Center(child: Text("Principal", style: TextStyle(color: Color(0xff62b5e5),),))),),
-                          Tab(child: SizedBox(width: 80, child: Center(child: Text("Visão Geral", style: TextStyle(color: Color(0xff62b5e5),),))),),
-                          Tab(child: SizedBox(width: 80, child: Center(child: Text("Resultados", style: TextStyle(color: Color(0xff62b5e5),),))),),
-                        ],
-                      ),
-                    ),
-                    SizedBox(
-                      width: 125,
-                      child: Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 7),
-                            child: IconButton(
-                              padding: EdgeInsets.zero,
-                              constraints: BoxConstraints(),
-                              icon: Icon(
-                                Icons.play_arrow,
-                                color: ((){
-                                  if(!force_stop && algorithm_status != STATUS_IN_PROCESS){
-                                    return const Color(0xff33ff33);
-                                  }else{
-                                    return const Color(0xff006600);
-                                  }
-                                }()),
-                              ),
-                              onPressed: () {
-
-                                if(!force_stop && algorithm_status != STATUS_IN_PROCESS){
-                                  print("play");
-                                  setState(() {
-                                    algorithm_status = STATUS_IN_PROCESS;
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 7),
-                            child: IconButton(
-                              hoverColor: Colors.grey.withOpacity(0.15),
-                              padding: EdgeInsets.zero,
-                              constraints: BoxConstraints(),
-                              icon: Icon(
-                                Icons.pause,
-                                color: ((){
-                                  if(!force_stop && algorithm_status != STATUS_PAUSE){
-                                    return const Color(0xff1a1aff);
-                                  }else{
-                                    return const Color(0xff000066);
-                                  }
-                                }()),
-                              ),
-                              onPressed: () {
-                                if(!force_stop && algorithm_status != STATUS_PAUSE){
-                                  print("pause");
-                                  setState(() {
-                                    if(generation < VIEW_INTERVAL){
-                                      minViewChart = 1;
-                                      maxViewChart = generation.toDouble();
-                                    }else{
-                                      minViewChart = (generation-VIEW_INTERVAL).toDouble();
-                                      maxViewChart = generation.toDouble();
-                                    }
-                                    algorithm_status = STATUS_PAUSE;
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 7),
-                            child: IconButton(
-                              hoverColor: Colors.grey.withOpacity(0.15),
-                              padding: EdgeInsets.zero,
-                              constraints: BoxConstraints(),
-                              icon: Icon(
-                                Icons.stop,
-                                color: ((){
-                                  if(force_stop){
-                                    return const Color(0xff660000);
-                                  }else{
-                                    return const Color(0xffFF0000);
-                                  }
-                                }()),
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  if(!force_stop){
-                                    print("stop");
-                                    setState(() {
-                                      algorithm_status = STATUS_STOP;
-                                      force_stop = true;
-                                    });
-                                  }
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  ],
-                ),
-              ),
-              Container(height: 0.7, color: Colors.white.withOpacity(0.3),),
-            ],),
-            Expanded(
-                child: TabBarView(
-                  controller: tabController,
-                  children: [
-                    MainPage(currentWidth, currentHeight),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        SizedBox(height: 25,),
-                        Padding(
-                          padding: EdgeInsets.all(0.0),
-                          child: Text('Under construction...', style: TextStyle(color: Colors.white),),
-                        ),
-                        Padding(
-                            padding: EdgeInsets.all(100),
-                            child: SfCartesianChart(
-                              tooltipBehavior: _tooltipBehavior,
-                              margin: const EdgeInsets.only(top: 10, right: 10),
-                              zoomPanBehavior: ZoomPanBehavior(
-                                enablePanning: true,
-                                enableMouseWheelZooming: true,
-                                enablePinching: true,
-                              ),
-                              primaryXAxis: NumericAxis(
-                                decimalPlaces: 0,
-                              ),
-                              primaryYAxis: NumericAxis(),
-                              series: <SplineAreaSeries<GraphData, num>>[
-                                SplineAreaSeries<GraphData, num>(
-                                  dataSource: chartBestAccuray,
-                                  gradient: _linearGradient,
-                                  // color: Colors.red,
-                                  xValueMapper: (GraphData data, _) => data.x,
-                                  yValueMapper: (GraphData data, _) => data.y,
-
-                                ),
-                              ],
-                            ),
-                        )
-                      ],
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: const [
-                        SizedBox(height: 25,),
-                        Padding(
-                          padding: EdgeInsets.all(0.0),
-                          child: Text('Under construction....', style: TextStyle(color: Colors.white),),
-                        ),
-
-                      ],
-                    ),
-                  ],
-                )),
-            Column(children: [
-              Container(height: 0.7, color: Colors.white.withOpacity(0.3),),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Container(height: 0.7, color: Colors.white.withOpacity(0.3),),
+          ],),
+          Expanded(
+              child: TabBarView(
+                controller: tabController,
                 children: [
-                  Padding(
-                    padding: EdgeInsets.all(4),
-                    child: Transform.rotate(angle: 3.1415, child: const Icon(Icons.copy, color: Colors.white, size: 20,),),
+                  MainPage(currentWidth, currentHeight),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(height: 25,),
+                      Padding(
+                        padding: EdgeInsets.all(0.0),
+                        child: Text('Under construction...', style: TextStyle(color: Colors.white),),
+                      ),
+                      Padding(
+                          padding: EdgeInsets.all(100),
+                          child: SfCartesianChart(
+                            // tooltipBehavior: _tooltipBehavior,
+                            margin: const EdgeInsets.only(top: 10, right: 10),
+                            zoomPanBehavior: ZoomPanBehavior(
+                              enablePanning: true,
+                              enableMouseWheelZooming: true,
+                              enablePinching: true,
+                            ),
+                            primaryXAxis: NumericAxis(
+                              decimalPlaces: 0,
+                            ),
+                            primaryYAxis: NumericAxis(),
+                            series: <SplineAreaSeries<GraphData, num>>[
+                              SplineAreaSeries<GraphData, num>(
+                                dataSource: chartBestAccuray,
+                                gradient: _linearGradient,
+                                // color: Colors.red,
+                                xValueMapper: (GraphData data, _) => data.x,
+                                yValueMapper: (GraphData data, _) => data.y,
+
+                              ),
+                            ],
+                          ),
+                      )
+                    ],
                   ),
-                  Align(
-                    alignment: Alignment.center,
-                    child: Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Text('Tempo total: ${printTimeFromMicroseconds(totalTime)}, Tempo de execução: ${printTimeFromMicroseconds(currentExecutionTime)}, Tempo de pausa: ${printTimeFromMicroseconds(currentPauseTime)}, Tempo de execução média de uma geração: ${(averageExecutionTime/1000).toStringAsFixed(0)}ms', style: TextStyle(color: Colors.white, fontSize: 12),),
-                    ),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: const [
+                      SizedBox(height: 25,),
+                      Padding(
+                        padding: EdgeInsets.all(0.0),
+                        child: Text('Under construction....', style: TextStyle(color: Colors.white),),
+                      ),
+
+                    ],
                   ),
-                  SizedBox(width: 24,)
                 ],
-              )
-            ],),
-          ]
-        ),
-      )
-    );
+              )),
+          //rodapé
+          Column(children: [
+            Container(height: 0.7, color: Colors.white.withOpacity(0.3),),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Transform.rotate(angle: 3.1415, child: const Icon(Icons.copy, color: Colors.white, size: 20,),),
+                ),
+                Align(
+                  alignment: Alignment.center,
+                  child: Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Text('Generations: $generation, Tempo total: ${printTimeFromMicroseconds(totalTime)}, Tempo de execução: ${printTimeFromMicroseconds(currentExecutionTime)}, Tempo de pausa: ${printTimeFromMicroseconds(currentPauseTime)}, Tempo de execução média de uma geração: ${(averageExecutionTime/1000).toStringAsFixed(0)}ms', style: TextStyle(color: Colors.white, fontSize: 12),),
+                  ),
+                ),
+                const SizedBox(width: 24,)
+              ],
+            )
+          ],),
+        ]
+      ),
+    )
+  );
   }
 }
+
 class GraphData{
   final double x;
   final double y;
   GraphData(this.x, this.y);
 }
-
 
 String printTimeFromMicroseconds(int time){
   if(time < 100){

@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:data/data.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/scheduler.dart';
@@ -49,8 +50,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
   int algorithm_status = 0;
   bool force_stop = false;
   double current_select_pressure=0.0;
+  double average_error=0.0;
   bool side_left_menu_is_visible = true;
+  bool side_left_menu_is_visible_w_delay = true;
   bool side_right_menu_is_visible = true;
+  bool side_right_menu_is_visible_w_delay = true;
   late TabController tabController;
   final LinearGradient _linearGradient = const LinearGradient(
     colors: <Color>[
@@ -69,37 +73,39 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
   List<GraphData> chartBestAccuray_RT_on_pause = <GraphData>[];
   List<GraphData> chartSelectPressure_RT = <GraphData>[];
   List<GraphData> chartSelectPressure_RT_on_pause = <GraphData>[];
-  List<GraphData> chartBestAccuray = <GraphData>[];
+  List<GraphDataColumn> chartErrorByFrequency_RT = <GraphDataColumn>[GraphDataColumn('0', 0), GraphDataColumn('0', 0), GraphDataColumn('0', 0), GraphDataColumn('0', 0), GraphDataColumn('0', 0)];//GraphData(dumper.freq[0], dumper.freq_error[0])
+  List<GraphDataColumn> chartErrorByFrequency_RT_teste = <GraphDataColumn>[GraphDataColumn('1000', 10), GraphDataColumn('900', 20), GraphDataColumn('500', 10), GraphDataColumn('300', 5), GraphDataColumn('200', 1)];//GraphData(dumper.freq[0], dumper.freq_error[0])
+  List<GraphData> chartBestAccuray_OV = <GraphData>[];
   String select_chart = 'accuracy';
   // double minViewChart = 0;
   // double maxViewChart = VIEW_INTERVAL.toDouble();
   final Random random = Random();
-  // final TooltipBehavior _tooltipBehavior = TooltipBehavior(
-  //     enable: true,
-  //     borderColor: Colors.white,
-  //     borderWidth: 2);
+
+
+  TooltipBehavior _tooltipBehavior(String headerText) {
+    return TooltipBehavior(
+      enable: true,
+      borderColor: Colors.white,
+      borderWidth: 2,
+      header: headerText,
+    );
+  }
   @override
   void initState(){
     super.initState();
     tabController=TabController(length: 3, vsync: this);
-    _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+    //obs: se colocar setState enquanto esta no pause ele n consegue ver oca
+    _timer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
       if(algorithm_status == STATUS_PAUSE){
-        setState(() {
-          currentPauseTime = totalTime-currentExecutionTime;
-        });
-
+        currentPauseTime = totalTime-currentExecutionTime;
       }
       if(generation != 0){
-        setState(() {
-          currentTime = DateTime.now();
-          totalTime = currentTime.difference(startTime).inMicroseconds;
-          averageExecutionTime = (totalTime-currentPauseTime)/generation;
-        });
+        currentTime = DateTime.now();
+        totalTime = currentTime.difference(startTime).inMicroseconds;
+        averageExecutionTime = (totalTime-currentPauseTime)/generation;
       }
-      if(algorithm_status == STATUS_STOP || algorithm_status == STATUS_ERROR2 || algorithm_status == STATUS_ERROR3 || generation >= LIMIT_GENERATIONS){
-        setState(() {
-          force_stop = true;
-        });
+      if(algorithm_status == STATUS_STOP || algorithm_status == STATUS_ERROR2 || algorithm_status == STATUS_ERROR3 || generation >= LIMIT_GENERATIONS || algorithm_status == STATUS_SUCESSFULL){
+        force_stop = true;
       }
 
       //inicio do algoritmo genetico
@@ -125,8 +131,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
           algorithm_status = sel[1] as int;
           allsolutions = sel[2] as List<Individual>;
 
+          if(rankedsolutions.isNotEmpty){
+            average_error = rankedsolutions[0].vector_errors.average();
+          }
           current_select_pressure = select_pressure(allsolutions);
 
+          //cloning for pass to mutation as parameter
           List<Individual> clone_ranked = [];
           for(int i=0;i<rankedsolutions.length; i++){
             clone_ranked.add(Individual.from(rankedsolutions[i]));
@@ -139,6 +149,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
           }
         });
 
+        //cloning for pass to mutation as parameter
         List<Individual> clone_ranked2 = [];
         for(int i=0;i<rankedsolutions.length; i++){
           clone_ranked2.add(Individual.from(rankedsolutions[i]));
@@ -165,6 +176,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
           }
         });
       }
+      //fim do algoritmo genetico
 
       //atualizando vetores dos gráficos
       if(rankedsolutions.length != 0 && algorithm_status == STATUS_IN_PROCESS && generation < LIMIT_GENERATIONS){
@@ -175,21 +187,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
           chartSelectPressure_RT_on_pause.add(GraphData(generation.toDouble(), current_select_pressure));
           chartSelectPressure_RT.add(GraphData(generation.toDouble(), current_select_pressure));
 
-          chartBestAccuray.add(GraphData(generation.toDouble(), rankedsolutions[0].accuracy));
+          for(int i=0; i<dumper.freq.length;i++){
+            chartErrorByFrequency_RT[i] = GraphDataColumn(dumper.freq[i].toStringAsFixed(0), rankedsolutions[0].vector_errors[i]);
+          }
+          //GraphData(dumper.freq[0], dumper.freq_error[0])
+          chartBestAccuray_OV.add(GraphData(generation.toDouble(), rankedsolutions[0].accuracy));
           if(generation > VIEW_INTERVAL){
             chartBestAccuray_RT.removeAt(0);
             chartSelectPressure_RT.removeAt(0);
           }
         });
       }
-      //fim do algoritmo genetico
+
 
     });
   }
 
   Widget SelectChart(String select, double current_width, double current_height, bool isCorner){
     if(select == 'accuracy'){
-      return Container(
+       return Container(
          margin: !isCorner ? EdgeInsets.only(left: 20.0, right: 20) : EdgeInsets.only(left: 10, right: 10),
          height: !isCorner ? current_height*0.55 : 80,
          child: SfCartesianChart(
@@ -202,7 +218,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                  fontSize: !isCorner ? 14 : 10,
                )
            ),
-           // tooltipBehavior: !isCorner ? _tooltipBehavior : null,
+           tooltipBehavior: !isCorner ?  _tooltipBehavior('Precisão') : null,
            margin: const EdgeInsets.only(top: 10, right: 10),
            zoomPanBehavior: !isCorner ? ZoomPanBehavior(
              enablePanning: true,
@@ -241,8 +257,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
            series: <LineSeries<GraphData, num>>[
              LineSeries<GraphData, num>(
                dataSource: algorithm_status == STATUS_IN_PROCESS ? chartBestAccuray_RT : chartBestAccuray_RT_on_pause,
-               // gradient: _linearGradient,
-               color: Colors.red,
+               color: Colors.greenAccent,
                width: 3,
                xValueMapper: (GraphData data, _) => data.x,
                yValueMapper: (GraphData data, _) => data.y,
@@ -264,7 +279,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
               fontSize: !isCorner ? 14 : 10,
             )
           ),
-          // tooltipBehavior: !isCorner ? _tooltipBehavior : null,
+          tooltipBehavior: !isCorner ? _tooltipBehavior('Select Pressure') : null,
           margin: const EdgeInsets.only(top: 10, right: 10),
           zoomPanBehavior: !isCorner ? ZoomPanBehavior(
             enablePanning: true,
@@ -299,16 +314,73 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
             ) : null,
             isVisible: !isCorner ? true : false,
           ),
-          // enableAxisAnimation: false,
           series: <LineSeries<GraphData, num>>[
             LineSeries<GraphData, num>(
               dataSource: algorithm_status == STATUS_IN_PROCESS ? chartSelectPressure_RT : chartSelectPressure_RT_on_pause,
-              // gradient: _linearGradient,
-              color: Colors.blue,
+              color: Colors.orangeAccent,
               width: 3,
               xValueMapper: (GraphData data, _) => data.x,
               yValueMapper: (GraphData data, _) => data.y,
 
+            ),
+          ],
+        ),
+      );
+    }else if (select == 'errors_by_freq'){
+      return Container(
+        margin: !isCorner ? const EdgeInsets.only(left: 20.0, right: 20) : const EdgeInsets.only(left: 10, right: 10),
+        height: !isCorner ? current_height*0.55 : 80,
+        child: SfCartesianChart(
+          tooltipBehavior: algorithm_status == STATUS_PAUSE ? _tooltipBehavior('Erro por Freq.') : null,
+          title: ChartTitle(
+            // margin: EdgeInsets.zero,
+            text: !isCorner ? 'Erro em cada frequência' : 'Erros',
+            textStyle: TextStyle(
+              color: Colors.white,
+              fontFamily: 'Roboto',
+              fontStyle: FontStyle.italic,
+              fontSize: !isCorner ? 14 : 10,
+            ),
+          ),
+          margin: const EdgeInsets.only(top: 10, right: 10),
+          zoomPanBehavior: !isCorner ? ZoomPanBehavior(
+            enablePanning: true,
+            enableMouseWheelZooming: true,
+            enablePinching: true,
+          ) :  null,
+          primaryXAxis: CategoryAxis(
+            isVisible: !isCorner ? true : false,
+            title: !isCorner ? AxisTitle(
+                text: 'Frequência',
+                textStyle: const TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Roboto',
+                    fontSize: 16,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w300
+                )
+            ) : null,
+
+          ),
+          primaryYAxis: NumericAxis(
+            title: !isCorner ? AxisTitle(
+                text: 'Erro (%)',
+                textStyle: const TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Roboto',
+                    fontSize: 16,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w300
+                )
+            ) : null,
+            isVisible: !isCorner ? true : false,
+          ),
+          series: <ColumnSeries<GraphDataColumn, String>>[
+            ColumnSeries<GraphDataColumn, String>(
+              dataSource: chartErrorByFrequency_RT,
+              color: Colors.redAccent,
+              xValueMapper: (GraphDataColumn data, _) => data.x,
+              yValueMapper: (GraphDataColumn data, _) => data.y*100,
             ),
           ],
         ),
@@ -330,21 +402,42 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                   padding: EdgeInsets.all(5),
                   constraints: BoxConstraints(),
                   icon: Icon(!side_left_menu_is_visible ? Icons.folder_open : Icons.maximize, color: Colors.white.withOpacity(0.8), size: 25),
+
                   onPressed: (){
                     setState((){
-                      print("menu lateral");
+                      print("menu lateral dir");
                       side_left_menu_is_visible = !side_left_menu_is_visible;
+                      if(!side_left_menu_is_visible){
+                        side_left_menu_is_visible_w_delay = false;
+                      }
+                    });
+                    Future.delayed(const Duration(milliseconds: 220), () {
+                      setState((){
+                        if(side_left_menu_is_visible){
+                          side_left_menu_is_visible_w_delay = true;
+                        }
+                      });
                     });
                   },
                 ),
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
+                  duration: const Duration(milliseconds: 200),
                   curve: Curves.decelerate,
                   width: side_left_menu_is_visible ? current_width*0.18 : 0,
                   child: Visibility(
-                      visible: side_left_menu_is_visible,
+                      visible: side_left_menu_is_visible_w_delay,
                       child: Column(
                         children: [
+                          Container(
+                            margin: EdgeInsets.only(top: 0, bottom: 8),
+                            child: const Text(
+                              'Gráficos',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
                           Container(
                             height: 85,
                             margin: EdgeInsets.only(left: 8, right: 8),
@@ -352,11 +445,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                               style: ElevatedButton.styleFrom(
                                 elevation: 5,
                                 backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent.withOpacity(0.1),
-                                side: const BorderSide(
-                                  width: 2,
-                                  color: Colors.grey,
-                                ),
+                                // shadowColor: Colors.transparent.withOpacity(0.1),
+                                // side: const BorderSide(
+                                //   width: 0,
+                                //   color: Colors.grey,
+                                // ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -380,11 +473,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                               style: ElevatedButton.styleFrom(
                                 elevation: 5,
                                 backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent.withOpacity(0.1),
-                                side: const BorderSide(
-                                  width: 2,
-                                  color: Colors.grey,
-                                ),
+                                // shadowColor: Colors.transparent.withOpacity(0.1),
+                                // side: const BorderSide(
+                                //   width: 2,
+                                //   color: Colors.grey,
+                                // ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -396,6 +489,34 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                                 print('select_pressure');
                                 setState(() {
                                   select_chart = 'select_pressure';
+                                });
+                              },
+                            ),
+                          ),
+                          SizedBox(height: 4,),
+                          Container(
+                            height: 85,
+                            margin: EdgeInsets.only(left: 8, right: 8),
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                elevation: 5,
+                                backgroundColor: Colors.transparent,
+                                // shadowColor: Colors.transparent.withOpacity(0.1),
+                                // side: const BorderSide(
+                                //   width: 2,
+                                //   color: Colors.grey,
+                                // ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: IgnorePointer(
+                                child: SelectChart('errors_by_freq', current_width, current_height, true),
+                              ),
+                              onPressed: () {
+                                print('errors_by_freq');
+                                setState(() {
+                                  select_chart = 'errors_by_freq';
                                 });
                               },
                             ),
@@ -416,25 +537,53 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
         Expanded(
           child: Column(
             children: [
-              SizedBox(height: 25,),
+              SizedBox(height: 20,),
               SelectChart(select_chart, current_width, current_height, false),
-              SizedBox(height: 25,),
-              Column(children: [
-                for(int i=0; i<3;i++)
-                  Padding(
-                    padding: const EdgeInsets.all(5.0),
-                    child: Text(rankedsolutions.length < 3 ? 'Vazio' : 'individual[$i] - accuracy: ${(rankedsolutions[i].accuracy).toStringAsFixed(2)}, weight: ${(rankedsolutions[i].weight).toStringAsFixed(2)} Kg, aco = [${(rankedsolutions[i].aco[0][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[1][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[2][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[3][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[4][2]*1000).toStringAsFixed(1)}], borracha = [${(rankedsolutions[i].rigidez[0][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[1][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[2][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[3][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[4][2]*1000).toStringAsFixed(1)}]', style: TextStyle(color: Colors.white),),
+              SizedBox(height: 10,),
+              Container(
+                height: 0.7,
+                color: Color(0xff595959).withOpacity(0.3),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 40.0, right: 0, top: 0, bottom: 10),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Align(alignment: Alignment.center,child: Text('Melhor Indivíduo', style: TextStyle(color: Colors.white, fontSize: 16),)),
+                      SizedBox(height: 4,),
+                      Text(rankedsolutions.isEmpty ? 'Vazio' : 'Precisão: ${rankedsolutions[0].accuracy.toStringAsFixed(2)}', style: TextStyle(color: Colors.white),),
+                      SizedBox(height: 4,),
+                      Text(rankedsolutions.isEmpty ? 'Vazio' : 'Massa: ${rankedsolutions[0].weight.toStringAsFixed(2)} Kg', style: TextStyle(color: Colors.white),),
+                      SizedBox(height: 4,),
+                      Text('Erro médio: ${(average_error*100).toStringAsFixed(2)}%', style: TextStyle(color: Colors.white),),
+                      SizedBox(height: 4,),
+                      Text(rankedsolutions.isEmpty ? 'Vazio' : 'Erro por frequência: [${(rankedsolutions[0].vector_errors[0]*100).toStringAsFixed(1)}, ${(rankedsolutions[0].vector_errors[1]*100).toStringAsFixed(1)}, ${(rankedsolutions[0].vector_errors[2]*100).toStringAsFixed(1)}, ${(rankedsolutions[0].vector_errors[3]*100).toStringAsFixed(1)}, ${(rankedsolutions[0].vector_errors[4]*100).toStringAsFixed(1)}]%', style: TextStyle(color: Colors.white),),
+                      SizedBox(height: 4,),
+                      Text('Select Pressure: ${current_select_pressure.toStringAsFixed(3)}', style: TextStyle(color: Colors.white),),
+                    ],
                   ),
-              ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 0.0),
-                child: Text('Select_pressure: ${current_select_pressure.toStringAsFixed(3)}', style: TextStyle(color: Colors.white),),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 15.0),
-                child: Text('Status: $algorithm_status', style: TextStyle(color: Colors.white),),
-              ),
+                ),
+              )
+              // Column(children: [
+              //   for(int i=0; i<3;i++)
+              //     Padding(
+              //       padding: const EdgeInsets.all(5.0),
+              //       //informações de espessura
+              //       //, aco = [${(rankedsolutions[i].aco[0][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[1][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[2][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[3][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[4][2]*1000).toStringAsFixed(1)}], borracha = [${(rankedsolutions[i].rigidez[0][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[1][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[2][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[3][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[4][2]*1000).toStringAsFixed(1)}]
+              //       child: Text(rankedsolutions.length < 3 ? 'Vazio' : 'Individuo ${i+1}: accuracy: ${(rankedsolutions[i].accuracy).toStringAsFixed(2)} e weight: ${(rankedsolutions[i].weight).toStringAsFixed(2)} Kg', style: TextStyle(color: Colors.white),),
+              //     ),
+              // ],
+              // ),
+              // Padding(
+              //   padding: const EdgeInsets.only(top: 0.0),
+              //   child: Text('Select_pressure: ${current_select_pressure.toStringAsFixed(3)}', style: TextStyle(color: Colors.white),),
+              // ),
+              // Padding(
+              //   padding: const EdgeInsets.only(top: 15.0),
+              //   child: Text('Status: $algorithm_status', style: TextStyle(color: Colors.white),),
+              // ),
             ],
           ),
         ),
@@ -457,19 +606,82 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                       setState((){
                         print("menu lateral dir");
                         side_right_menu_is_visible = !side_right_menu_is_visible;
+                        if(!side_right_menu_is_visible){
+                          side_right_menu_is_visible_w_delay = false;
+                        }
+                      });
+                      Future.delayed(const Duration(milliseconds: 220), () {
+                        setState((){
+                          if(side_right_menu_is_visible){
+                            side_right_menu_is_visible_w_delay = true;
+                          }
+                        });
                       });
                     },
                   ),
                 ),
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
+                  duration: const Duration(milliseconds: 200),
                   curve: Curves.decelerate,
-                  // color: Color(0xff1c1c30),
-                  width: side_right_menu_is_visible ? current_width*0.2 : 0,
-                  // color: Colors.red,
+                  width: side_right_menu_is_visible ? current_width*0.22 : 0,
                   child: Visibility(
-                      visible: side_right_menu_is_visible,
-                      child: Text('width: ${current_width*0.2}', style: TextStyle(color: Colors.white),)
+                      visible: side_right_menu_is_visible_w_delay,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 10.0, right: 0, top: 0, bottom: 10),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Align(alignment: Alignment.center,child: Text('Parâmetros', style: TextStyle(color: Colors.white, fontSize: 16),)),
+                            SizedBox(height: 10,),
+                            Text(dumper.freq.isEmpty ? 'Vazio' : 'Objetivos (Frequências):\n[${dumper.freq[0].toStringAsFixed(0)}, ${dumper.freq[1].toStringAsFixed(0)}, ${dumper.freq[2].toStringAsFixed(0)}, ${dumper.freq[3].toStringAsFixed(0)}, ${dumper.freq[4].toStringAsFixed(0)}] Hz', style: TextStyle(color: Colors.white),),
+                            SizedBox(height: 4,),
+                            Text(dumper.freq_error.isEmpty ? 'Vazio' : 'Peso das frequências: \n(Mudar aqui)', style: TextStyle(color: Colors.white),),
+                            SizedBox(height: 4,),
+                            Text('Largura: ${(dumper.width*1000).toStringAsFixed(1)} mm', style: TextStyle(color: Colors.white),),
+                            SizedBox(height: 4,),
+                            Text('Comprimento: ${(dumper.lenght*100).toStringAsFixed(1)} cm', style: TextStyle(color: Colors.white),),
+                            SizedBox(height: 4,),
+                            Text('Intervalo de Peso: [${(dumper.min_weight).toStringAsFixed(1)}, ${(dumper.max_weight).toStringAsFixed(1)}] Kg', style: TextStyle(color: Colors.white),),
+                            SizedBox(height: 4,),
+                            Text('Intervalo de espessura de mola:\n[${(dumper.min_springThickness_mm).toStringAsFixed(1)}, ${(dumper.max_springThickness_mm).toStringAsFixed(1)}] mm', style: TextStyle(color: Colors.white),),
+                            Text(((){
+                                String response = '    - Opções de mola: [';
+                                for(int i=0; i<dumper.springOptions.length; i++){
+                                  if(i!=dumper.springOptions.length-1){
+                                    response = '$response${(dumper.springOptions[i]).toStringAsFixed(1)}, ';
+                                  }else{
+                                    response = '$response${(dumper.springOptions[i]).toStringAsFixed(1)}] mm';
+                                  }
+                                }
+                                return response;
+                              }()),
+                              style: TextStyle(color: Colors.white),
+                              ),
+                            SizedBox(height: 4,),
+                            Text('Intervalo de espessura de aço:\n[${(dumper.min_massThickness_mm).toStringAsFixed(1)}, ${(dumper.max_massThickness_mm).toStringAsFixed(1)}] mm', style: TextStyle(color: Colors.white),),
+                            Text(((){
+                              String response = '    - Opções de aço: [';
+                              for(int i=0; i<dumper.massOptions.length; i++){
+                                if(i!=dumper.massOptions.length-1){
+                                  response = '$response${(dumper.massOptions[i]).toStringAsFixed(1)}, ';
+                                }else{
+                                  response = '$response${(dumper.massOptions[i]).toStringAsFixed(1)}] mm';
+                                }
+                              }
+                              return response;
+                            }()),
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            SizedBox(height: 4,),
+                            Text('Densidade da mola ${(dumper.springDensity).toStringAsFixed(0)} Kg/m^3', style: TextStyle(color: Colors.white),),
+                            SizedBox(height: 4,),
+                            Text('Elasticidade da mola ${(dumper.springElasticity/pow(10, 6)).toStringAsFixed(2)} MPa', style: TextStyle(color: Colors.white),),
+                            SizedBox(height: 4,),
+                            Text('Densidade do aço ${(dumper.massDensity).toStringAsFixed(0)} Kg/m^3', style: TextStyle(color: Colors.white),),
+                          ],
+                        ),
+                      )
                   ),
                 ),
               ],
@@ -718,7 +930,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                             primaryYAxis: NumericAxis(),
                             series: <SplineAreaSeries<GraphData, num>>[
                               SplineAreaSeries<GraphData, num>(
-                                dataSource: chartBestAccuray,
+                                dataSource: chartBestAccuray_OV,
                                 gradient: _linearGradient,
                                 // color: Colors.red,
                                 xValueMapper: (GraphData data, _) => data.x,
@@ -758,7 +970,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                   alignment: Alignment.center,
                   child: Padding(
                     padding: EdgeInsets.all(4),
-                    child: Text('Generations: $generation, Tempo total: ${printTimeFromMicroseconds(totalTime)}, Tempo de execução: ${printTimeFromMicroseconds(currentExecutionTime)}, Tempo de pausa: ${printTimeFromMicroseconds(currentPauseTime)}, Tempo de execução média de uma geração: ${(averageExecutionTime/1000).toStringAsFixed(0)}ms', style: TextStyle(color: Colors.white, fontSize: 12),),
+                    //Tempo total: ${printTimeFromMicroseconds(totalTime)},
+                    //de pausa: ${printTimeFromMicroseconds(currentPauseTime)},
+                    child: Text('Generations: $generation. Tempo de execução: ${printTimeFromMicroseconds(currentExecutionTime)}, média de uma geração: ${(averageExecutionTime/1000).toStringAsFixed(0)}ms', style: TextStyle(color: Colors.white, fontSize: 12),),
                   ),
                 ),
                 const SizedBox(width: 24,)
@@ -776,6 +990,11 @@ class GraphData{
   final double x;
   final double y;
   GraphData(this.x, this.y);
+}
+class GraphDataColumn{
+  final String x;
+  final double y;
+  GraphDataColumn(this.x, this.y);
 }
 
 String printTimeFromMicroseconds(int time){

@@ -45,6 +45,7 @@ dependencies:
   ml_linalg: ^13.11.31
   data: ^0.10.0
   syncfusion_flutter_charts: ^20.4.54
+  flutter_radar_chart: ^0.2.1
 
 dev_dependencies:
   flutter_test:

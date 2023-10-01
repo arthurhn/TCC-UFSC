@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:data/data.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
+import 'package:flutter_radar_chart/flutter_radar_chart.dart';
 import 'package:flutter/scheduler.dart';
 import 'main.dart';
 import 'formPage.dart';
@@ -80,8 +81,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
   // double minViewChart = 0;
   // double maxViewChart = VIEW_INTERVAL.toDouble();
   final Random random = Random();
-
-
   TooltipBehavior _tooltipBehavior(String headerText) {
     return TooltipBehavior(
       enable: true,
@@ -90,6 +89,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
       header: headerText,
     );
   }
+
+  bool darkMode = true;
+  bool useSides = true;
+
   @override
   void initState(){
     super.initState();
@@ -566,24 +569,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                   ),
                 ),
               )
-              // Column(children: [
-              //   for(int i=0; i<3;i++)
-              //     Padding(
-              //       padding: const EdgeInsets.all(5.0),
-              //       //informações de espessura
-              //       //, aco = [${(rankedsolutions[i].aco[0][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[1][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[2][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[3][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].aco[4][2]*1000).toStringAsFixed(1)}], borracha = [${(rankedsolutions[i].rigidez[0][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[1][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[2][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[3][2]*1000).toStringAsFixed(1)}, ${(rankedsolutions[i].rigidez[4][2]*1000).toStringAsFixed(1)}]
-              //       child: Text(rankedsolutions.length < 3 ? 'Vazio' : 'Individuo ${i+1}: accuracy: ${(rankedsolutions[i].accuracy).toStringAsFixed(2)} e weight: ${(rankedsolutions[i].weight).toStringAsFixed(2)} Kg', style: TextStyle(color: Colors.white),),
-              //     ),
-              // ],
-              // ),
-              // Padding(
-              //   padding: const EdgeInsets.only(top: 0.0),
-              //   child: Text('Select_pressure: ${current_select_pressure.toStringAsFixed(3)}', style: TextStyle(color: Colors.white),),
-              // ),
-              // Padding(
-              //   padding: const EdgeInsets.only(top: 15.0),
-              //   child: Text('Status: $algorithm_status', style: TextStyle(color: Colors.white),),
-              // ),
             ],
           ),
         ),
@@ -627,7 +612,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                   child: Visibility(
                       visible: side_right_menu_is_visible_w_delay,
                       child: Padding(
-                        padding: const EdgeInsets.only(left: 10.0, right: 0, top: 0, bottom: 10),
+                        padding: const EdgeInsets.only(left: 10.0, right: 0, top: 0, bottom: 0),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -635,15 +620,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                             Align(alignment: Alignment.center,child: Text('Parâmetros', style: TextStyle(color: Colors.white, fontSize: 16),)),
                             SizedBox(height: 10,),
                             Text(dumper.freq.isEmpty ? 'Vazio' : 'Objetivos (Frequências):\n[${dumper.freq[0].toStringAsFixed(0)}, ${dumper.freq[1].toStringAsFixed(0)}, ${dumper.freq[2].toStringAsFixed(0)}, ${dumper.freq[3].toStringAsFixed(0)}, ${dumper.freq[4].toStringAsFixed(0)}] Hz', style: TextStyle(color: Colors.white),),
-                            SizedBox(height: 4,),
+                            SizedBox(height: 3,),
                             Text(dumper.freq_error.isEmpty ? 'Vazio' : 'Peso das frequências: \n(Mudar aqui)', style: TextStyle(color: Colors.white),),
-                            SizedBox(height: 4,),
+                            SizedBox(height: 3,),
                             Text('Largura: ${(dumper.width*1000).toStringAsFixed(1)} mm', style: TextStyle(color: Colors.white),),
-                            SizedBox(height: 4,),
+                            SizedBox(height: 3,),
                             Text('Comprimento: ${(dumper.lenght*100).toStringAsFixed(1)} cm', style: TextStyle(color: Colors.white),),
-                            SizedBox(height: 4,),
+                            SizedBox(height: 3,),
                             Text('Intervalo de Peso: [${(dumper.min_weight).toStringAsFixed(1)}, ${(dumper.max_weight).toStringAsFixed(1)}] Kg', style: TextStyle(color: Colors.white),),
-                            SizedBox(height: 4,),
+                            SizedBox(height: 3,),
                             Text('Intervalo de espessura de mola:\n[${(dumper.min_springThickness_mm).toStringAsFixed(1)}, ${(dumper.max_springThickness_mm).toStringAsFixed(1)}] mm', style: TextStyle(color: Colors.white),),
                             Text(((){
                                 String response = '    - Opções de mola: [';
@@ -658,7 +643,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                               }()),
                               style: TextStyle(color: Colors.white),
                               ),
-                            SizedBox(height: 4,),
+                            SizedBox(height: 3,),
                             Text('Intervalo de espessura de aço:\n[${(dumper.min_massThickness_mm).toStringAsFixed(1)}, ${(dumper.max_massThickness_mm).toStringAsFixed(1)}] mm', style: TextStyle(color: Colors.white),),
                             Text(((){
                               String response = '    - Opções de aço: [';
@@ -673,11 +658,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                             }()),
                               style: TextStyle(color: Colors.white),
                             ),
-                            SizedBox(height: 4,),
+                            SizedBox(height: 3,),
                             Text('Densidade da mola ${(dumper.springDensity).toStringAsFixed(0)} Kg/m^3', style: TextStyle(color: Colors.white),),
-                            SizedBox(height: 4,),
+                            SizedBox(height: 3,),
                             Text('Elasticidade da mola ${(dumper.springElasticity/pow(10, 6)).toStringAsFixed(2)} MPa', style: TextStyle(color: Colors.white),),
-                            SizedBox(height: 4,),
+                            SizedBox(height: 3,),
                             Text('Densidade do aço ${(dumper.massDensity).toStringAsFixed(0)} Kg/m^3', style: TextStyle(color: Colors.white),),
                           ],
                         ),
@@ -693,8 +678,232 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
     );
   }
 
-  Widget build(BuildContext context) {
+  Widget OverViewPage( current_width, double current_height){
+    const ticks = [10, 20, 30, 40, 50];
+    List<String> features = ["Freq. 1", "Freq. 2", "Freq. 3", "Freq. 4", "Freq. 5",];
+    for(int i=0; i<dumper.freq.length; i++){
+      features[i] = "${dumper.freq[i]} Hz";
+    }
 
+    List<List<double>> data = [];
+    for(int i=0; i<1; i++){
+      data.add([]);
+      for(int j=0; j<5; j++){
+        if(rankedsolutions[i].vector_errors[j]*100 > 50){
+          data[i].add(50);
+        }else{
+          data[i].add(double.parse((rankedsolutions[i].vector_errors[j]*100).toStringAsFixed(2)));
+        }
+      }
+    }
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(height: 25,),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              flex: 50,
+              child: Container(
+                margin: const EdgeInsets.only(left: 50, top: 30, right: 10, bottom: 30),
+                height: current_height*0.4,
+                // width: current_width*0.42,
+                child: SfCartesianChart(
+                  title: ChartTitle(
+                      text: 'Geração x Precisão',
+                      textStyle: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Roboto',
+                        fontStyle: FontStyle.italic,
+                        fontSize: 16,
+                      )
+                  ),
+                  tooltipBehavior: algorithm_status != STATUS_IN_PROCESS ?  _tooltipBehavior('Precisão') : null,
+                  margin: const EdgeInsets.only(top: 10, right: 10),
+                  zoomPanBehavior: ZoomPanBehavior(
+                    enablePanning: true,
+                    enableMouseWheelZooming: true,
+                    enablePinching: true,
+                  ),
+                  primaryXAxis: NumericAxis(
+                    interval: ((){
+                      if(generation < 50){
+                        return 5.0;
+                      }else if(generation < 100){
+                        return 10.0;
+                      }else if(generation < 200){
+                        return 20.0;
+                      }else{
+                        return 50.0;
+                      }
+                    }()),
+                    decimalPlaces: 0,
+                    title: AxisTitle(
+                        text: 'Geração',
+                        textStyle: const TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'Roboto',
+                            fontSize: 16,
+                            fontStyle: FontStyle.italic,
+                            fontWeight: FontWeight.w300
+                        )
+                    ),
+                    isVisible: true,
+                  ),
+                  primaryYAxis: NumericAxis(
+                    title: AxisTitle(
+                        text: 'Precisão',
+                        textStyle: const TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'Roboto',
+                            fontSize: 16,
+                            fontStyle: FontStyle.italic,
+                            fontWeight: FontWeight.w300
+                        )
+                    ),
+                    isVisible: true,
+                  ),
+                  series: <SplineAreaSeries<GraphData, num>>[
+                    SplineAreaSeries<GraphData, num>(
+                      dataSource: chartBestAccuray_RT_on_pause,
+                      gradient: const LinearGradient(
+                        colors: <Color>[
+                          Colors.green,
+                          Color(0xff0099ff),
+                          Color(0xff0000ff),
+                        ],
+                        stops: <double>[0.1, 0.3, 0.9],
+                        // Setting alignment for the series gradient
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                      xValueMapper: (GraphData data, _) => data.x,
+                      yValueMapper: (GraphData data, _) => data.y,
+
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 50,
+              child: Container(
+                margin: const EdgeInsets.only(left: 10, top: 30, right: 50, bottom: 30),
+                // width: current_width*0.42,
+                height: current_height*0.4,
+                child: SfCartesianChart(
+                  title: ChartTitle(
+                      text: 'Geração x Select Pressure',
+                      textStyle: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Roboto',
+                        fontStyle: FontStyle.italic,
+                        fontSize: 16,
+                      )
+                  ),
+                  tooltipBehavior: algorithm_status != STATUS_IN_PROCESS ?  _tooltipBehavior('Select Pressure') : null,
+                  margin: const EdgeInsets.only(top: 10, right: 10),
+                  zoomPanBehavior: ZoomPanBehavior(
+                    enablePanning: true,
+                    enableMouseWheelZooming: true,
+                    enablePinching: true,
+                  ),
+                  primaryXAxis: NumericAxis(
+                    interval: ((){
+                      if(generation < 50){
+                        return 5.0;
+                      }else if(generation < 100){
+                        return 10.0;
+                      }else if(generation < 200){
+                        return 20.0;
+                      }else{
+                        return 50.0;
+                      }
+                      }()),
+                    decimalPlaces: 0,
+                    title: AxisTitle(
+                        text: 'Geração',
+                        textStyle: const TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'Roboto',
+                            fontSize: 16,
+                            fontStyle: FontStyle.italic,
+                            fontWeight: FontWeight.w300
+                        )
+                    ),
+                    isVisible: true,
+                  ),
+                  primaryYAxis: NumericAxis(
+                    title: AxisTitle(
+                        text: 'Select Pressure',
+                        textStyle: const TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'Roboto',
+                            fontSize: 16,
+                            fontStyle: FontStyle.italic,
+                            fontWeight: FontWeight.w300
+                        )
+                    ),
+                    isVisible: true,
+                  ),
+                  series: <SplineAreaSeries<GraphData, num>>[
+                    SplineAreaSeries<GraphData, num>(
+                      dataSource: chartSelectPressure_RT_on_pause,
+                      gradient: const LinearGradient(
+                        colors: <Color>[
+                          Colors.redAccent,
+                          Colors.orange,
+                          Colors.orangeAccent,
+                        ],
+                        stops: <double>[0.1, 0.3, 0.9],
+                        // Setting alignment for the series gradient
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                      // color: Colors.red,
+                      xValueMapper: (GraphData data, _) => data.x,
+                      yValueMapper: (GraphData data, _) => data.y,
+
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        Expanded(
+            child: Column(
+              children: [
+                const Text(
+                  'Erros (%) por frequência',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Roboto',
+                    fontStyle: FontStyle.italic,
+                    fontSize: 20,
+                  ),
+                ),
+                Expanded(
+                  child: RadarChart.dark(
+                    ticks: ticks,
+                    features: features,
+                    data: data,
+                    reverseAxis: true,
+                    useSides: true,
+                    // graphColors: [Colors.orange],
+                  ),
+                ),
+              ],
+            )
+        ),
+      ],
+    );
+  }
+
+  Widget build(BuildContext context) {
 
   var currentWidth = MediaQuery.of(context).size.width;
   var currentHeight = MediaQuery.of(context).size.height;
@@ -905,43 +1114,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                 controller: tabController,
                 children: [
                   MainPage(currentWidth, currentHeight),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SizedBox(height: 25,),
-                      Padding(
-                        padding: EdgeInsets.all(0.0),
-                        child: Text('Under construction...', style: TextStyle(color: Colors.white),),
-                      ),
-                      Padding(
-                          padding: EdgeInsets.all(100),
-                          child: SfCartesianChart(
-                            // tooltipBehavior: _tooltipBehavior,
-                            margin: const EdgeInsets.only(top: 10, right: 10),
-                            zoomPanBehavior: ZoomPanBehavior(
-                              enablePanning: true,
-                              enableMouseWheelZooming: true,
-                              enablePinching: true,
-                            ),
-                            primaryXAxis: NumericAxis(
-                              decimalPlaces: 0,
-                            ),
-                            primaryYAxis: NumericAxis(),
-                            series: <SplineAreaSeries<GraphData, num>>[
-                              SplineAreaSeries<GraphData, num>(
-                                dataSource: chartBestAccuray_OV,
-                                gradient: _linearGradient,
-                                // color: Colors.red,
-                                xValueMapper: (GraphData data, _) => data.x,
-                                yValueMapper: (GraphData data, _) => data.y,
-
-                              ),
-                            ],
-                          ),
-                      )
-                    ],
-                  ),
+                  OverViewPage(currentWidth, currentHeight),
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,

@@ -3,6 +3,7 @@ import 'dart:core';
 import 'package:data/data.dart';
 import 'package:dumper_optimizer/home.dart';
 import 'v1_0_fisics_dumper.dart';
+import "dart:io";
 
 class Individual{
   double accuracy;
@@ -179,7 +180,6 @@ List<Object> selection_function(List<Individual> population, List<double> correc
     return [rankedsolutions, selection_status, allsolutions];
   }
 
-
   //avaliando a população e colocando o weight, preciso fazer isso pq na primeira iteração por exemplo a precisão não esta definida, e nem pode pq n sabe o freq_target
   for(int i=0; i<population.length;i++){
     population[i] = rate_individual(population[i], arg);
@@ -287,27 +287,27 @@ List<Individual> crossover_function(List<Individual> topsolutions, Dumper arg){
       for(int i=0; i<how_many_try_changes;i++){
         int change_position = Random().nextInt(5);
         ind.rigidez[change_position][2] = ind2.rigidez[change_position][2];
-        ind.genesis_rigidez_mm = List<List<double>>.from(ind2.genesis_rigidez_mm);
+        ind.genesis_rigidez_mm[change_position] = List<double>.from(ind2.genesis_rigidez_mm[change_position]);
       }
     }
     if(who_is_change == 1){
       for(int i=0; i<how_many_try_changes;i++){
         int change_position = Random().nextInt(5);
         ind.aco[change_position][2] = ind2.aco[change_position][2];
-        ind.genesis_aco_mm = List<List<double>>.from(ind2.genesis_aco_mm);
+        ind.genesis_aco_mm[change_position] = List<double>.from(ind2.genesis_aco_mm[change_position]);
       }
     }
     if(who_is_change == 2){
       for(int i=0; i<how_many_try_changes;i++){
         int change_position = Random().nextInt(5);
         ind.rigidez[change_position][2] = ind2.rigidez[change_position][2];
-        ind.genesis_rigidez_mm = List<List<double>>.from(ind2.genesis_rigidez_mm);
+        ind.genesis_rigidez_mm[change_position] = List<double>.from(ind2.genesis_rigidez_mm[change_position]);
       }
       how_many_try_changes = Random().nextInt(4)+1;
       for(int i=0; i<how_many_try_changes;i++){
         int change_position = Random().nextInt(5);
         ind.aco[change_position][2] = ind2.aco[change_position][2];
-        ind.genesis_aco_mm = List<List<double>>.from(ind2.genesis_aco_mm);
+        ind.genesis_aco_mm[change_position] = List<double>.from(ind2.genesis_aco_mm[change_position]);
       }
     }
 

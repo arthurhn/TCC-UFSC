@@ -75,10 +75,10 @@ class _FormPageState extends State<FormPage> {
           }
           for(int i=0; i<10; i++){
             if(_field == 'springOptions[$i]'){
-            _dumper.springOptions[i] = double.parse(value)/1000;
+            _dumper.springOptions[i] = double.parse(value);
             }
             if(_field == 'massOptions[$i]'){
-              _dumper.massOptions[i] = double.parse(value)/1000;
+              _dumper.massOptions[i] = double.parse(value);
             }
           }
         });

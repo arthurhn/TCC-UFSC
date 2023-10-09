@@ -6,7 +6,7 @@ import 'dart:core';
 
 class Dumper{
   List<double> freq; //[Hz]
-  List<double> freq_error; //[%]
+  List<double> freq_weight;
   double width; //[m]
   double lenght; //[m]
   double min_weight; //[Kg]
@@ -20,11 +20,16 @@ class Dumper{
   double massDensity; //[Kg/m^3]
   double springDensity; //[Kg/m^3]
   double springElasticity; //[Pa]
-  int count;
+  List<double> freq_error; //[%]
+  int limit_generation;
+  int generation_size;
+  int view_interval;
+  int count;//auxiliar variable to reset in the screen transition
 
-  Dumper(this.count, this.freq, this.freq_error, this.width, this.lenght, this.min_weight, this.max_weight,
+  Dumper(this.count, this.freq_error, this.freq_weight, this.width, this.lenght, this.min_weight, this.max_weight,
       this.min_springThickness_mm, this.max_springThickness_mm, this.min_massThickness_mm, this.max_massThickness_mm,
-      this.springOptions, this.massOptions, this.massDensity, this.springDensity, this.springElasticity);
+      this.springOptions, this.massOptions, this.massDensity, this.springDensity, this.springElasticity,
+      this.freq, this.limit_generation, this.generation_size,this.view_interval);
 }
 
 List<List<List<double>>> parametros(List<double> tmola, List<double> taco, Dumper arg){

@@ -22,8 +22,9 @@ class MyApp extends StatelessWidget {
   MyApp({Key? key}) : super(key: key);
 
   Dumper dumper = Dumper(
-  0, [1863.0, 1470.0, 1034.0, 603.0, 360.0], [2, 2, 2, 2, 10], 50/1000, 49/100, 4, 11, 2, 15, 3, 15,
-  [2, 3, 4], [3, 3.3, 3.8, 5], 7800, 1300, 3.5*pow(10, 6));
+  0,  [2, 2, 2, 2, 10], [2, 3, 4, 5, 1], 50/1000, 49/100, 4, 11, 2, 15, 3, 15,
+  [2, 3, 4], [3, 3.3, 3.8, 5], 7800, 1300, 3.5*pow(10, 6),
+  [1863.0, 1470.0, 1034.0, 603.0, 360.0], 300, 250, 100);
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

@@ -15,9 +15,9 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:core';
 
-const LIMIT_GENERATIONS = 350;
-const GENERATION_SIZE = 250;
-const VIEW_INTERVAL = 100;
+// const LIMIT_GENERATIONS = 150;
+// const GENERATION_SIZE = 250;
+// const VIEW_INTERVAL = 100;
 const STATUS_IN_PROCESS = 0;
 const STATUS_SUCESSFULL = 1;//when reachs the errors targets
 const STATUS_FINISHED = 2;//when reach the limit generation
@@ -56,6 +56,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
   bool side_left_menu_is_visible_results = true;
   bool side_right_menu_is_visible = true;
   int individual_select = 0; //which individual that will appear in the results
+  int oneTimeAfterEnd = 0;//when reaches limit_generetion, activate one time setState and after that it can't setState to fast because of tooltip
   late TabController tabController;
   final LinearGradient _linearGradient = const LinearGradient(
     colors: <Color>[
@@ -80,35 +81,56 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
   final Random random = Random();
   bool darkMode = true;
   bool useSides = true;
+  int pauseOneTime = 0;
 
   @override
   void initState(){
     super.initState();
     tabController=TabController(length: 3, vsync: this);
     //obs: se colocar setState enquanto esta no pause ele n consegue ver oca
-    _timer = Timer.periodic(const Duration(milliseconds: 20), (timer) {
+    _timer = Timer.periodic(const Duration(milliseconds: 40), (timer) {
       if(algorithm_status == STATUS_PAUSE){
         currentPauseTime = totalTime-currentExecutionTime;
       }
-      if(generation != 0){
+      if(generation != 0 && (algorithm_status == STATUS_IN_PROCESS || algorithm_status == STATUS_PAUSE)){
         currentTime = DateTime.now();
         totalTime = currentTime.difference(startTime).inMicroseconds;
         averageExecutionTime = (totalTime-currentPauseTime)/generation;
       }
-      if(algorithm_status == STATUS_STOP || algorithm_status == STATUS_ERROR2 || algorithm_status == STATUS_ERROR3 || generation >= LIMIT_GENERATIONS || algorithm_status == STATUS_SUCESSFULL){
+      if(algorithm_status == STATUS_STOP || algorithm_status == STATUS_ERROR2 || algorithm_status == STATUS_ERROR3 || generation >= dumper.limit_generation || algorithm_status == STATUS_SUCESSFULL){
+        if(generation >= dumper.limit_generation && oneTimeAfterEnd == 0){
+          setState(() {
+            algorithm_status = STATUS_FINISHED;
+            tabController.animateTo(2);
+            oneTimeAfterEnd++;
+          });
+        }
         force_stop = true;
+      }
+      if(algorithm_status == STATUS_SUCESSFULL && oneTimeAfterEnd == 0){
+        setState(() {
+          tabController.animateTo(2);
+          oneTimeAfterEnd++;
+        });
+      }
+      if(tabController.index == 2 && pauseOneTime == 0){
+        setState(() {
+          print("setState");
+          pauseOneTime++;
+          algorithm_status = STATUS_PAUSE;
+        });
       }
 
       //inicio do algoritmo genetico
       //condição de parada, seja: o botão de parada, algum erro, seja ele por limite de tempo
-      if(generation < LIMIT_GENERATIONS && algorithm_status == STATUS_IN_PROCESS && !force_stop && algorithm_status != STATUS_PAUSE){
+      if(generation < dumper.limit_generation && algorithm_status == STATUS_IN_PROCESS && !force_stop && algorithm_status != STATUS_PAUSE){
         //primeira vez na tela home
         if(rankedsolutions.isEmpty && generation == 0){
           int count = 0;
           print("------------- first gen --------------");
-          rankedsolutions = generate_new_solution(GENERATION_SIZE, dumper);
+          rankedsolutions = generate_new_solution(dumper.generation_size, dumper);
           while(rankedsolutions.isEmpty && count < 1000){
-            rankedsolutions = generate_new_solution(GENERATION_SIZE, dumper);
+            rankedsolutions = generate_new_solution(dumper.generation_size, dumper);
             count++;
           }
           if(count >= 1000){
@@ -117,7 +139,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
         }
 
         setState(() {
-          var sel = selection_function(rankedsolutions, dumper.freq, dumper, LIMIT_GENERATIONS, GENERATION_SIZE);
+          var sel = selection_function(rankedsolutions, dumper.freq, dumper, dumper.limit_generation, dumper.generation_size);
           rankedsolutions = sel[0] as List<Individual>;
           algorithm_status = sel[1] as int;
           allsolutions = sel[2] as List<Individual>;
@@ -145,7 +167,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
         for(int i=0;i<rankedsolutions.length; i++){
           clone_ranked2.add(Individual.from(rankedsolutions[i]));
         }
-        List<Individual> mutation = mutation_function(clone_ranked2, GENERATION_SIZE, dumper);
+        List<Individual> mutation = mutation_function(clone_ranked2, dumper.generation_size, dumper);
         setState(() {
           rankedsolutions = [];//erase all population
           for(int i=0;i<mutation.length; i++){
@@ -170,7 +192,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
       //fim do algoritmo genetico
 
       //atualizando vetores dos gráficos
-      if(rankedsolutions.length != 0 && algorithm_status == STATUS_IN_PROCESS && generation < LIMIT_GENERATIONS){
+      if(rankedsolutions.length != 0 && algorithm_status == STATUS_IN_PROCESS && generation < dumper.limit_generation){
         setState(() {
           chartBestAccuray_RT_on_pause.add(GraphData(generation.toDouble(), rankedsolutions[0].accuracy));
           chartBestAccuray_RT.add(GraphData(generation.toDouble(), rankedsolutions[0].accuracy));
@@ -183,7 +205,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
           }
           //GraphData(dumper.freq[0], dumper.freq_error[0])
           chartBestAccuray_OV.add(GraphData(generation.toDouble(), rankedsolutions[0].accuracy));
-          if(generation > VIEW_INTERVAL){
+          if(generation > dumper.view_interval){
             chartBestAccuray_RT.removeAt(0);
             chartSelectPressure_RT.removeAt(0);
           }
@@ -277,7 +299,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                  fontSize: !isCorner ? 14 : 10,
                )
            ),
-           tooltipBehavior: !isCorner ?  _tooltipBehavior('Precisão') : null,
+           tooltipBehavior: !isCorner && algorithm_status != STATUS_IN_PROCESS ?  _tooltipBehavior('Precisão') : null,
            margin: const EdgeInsets.only(top: 10, right: 10),
            zoomPanBehavior: !isCorner ? ZoomPanBehavior(
              enablePanning: true,
@@ -338,7 +360,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
               fontSize: !isCorner ? 14 : 10,
             )
           ),
-          tooltipBehavior: !isCorner ? _tooltipBehavior('Select Pressure') : null,
+          tooltipBehavior: !isCorner && algorithm_status != STATUS_IN_PROCESS ?  _tooltipBehavior('Precisão') : null,
           margin: const EdgeInsets.only(top: 10, right: 10),
           zoomPanBehavior: !isCorner ? ZoomPanBehavior(
             enablePanning: true,
@@ -390,7 +412,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
         margin: !isCorner ? const EdgeInsets.only(left: 20.0, right: 20) : const EdgeInsets.only(left: 10, right: 10),
         height: !isCorner ? current_height*0.55 : 80,
         child: SfCartesianChart(
-          tooltipBehavior: algorithm_status == STATUS_PAUSE ? _tooltipBehavior('Erro por Freq.') : null,
+          tooltipBehavior: algorithm_status == STATUS_IN_PROCESS ? null : _tooltipBehavior('Erro por Freq.'),
           title: ChartTitle(
             // margin: EdgeInsets.zero,
             text: !isCorner ? 'Erro em cada frequência' : 'Erros',
@@ -1307,6 +1329,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
       allsolutions = [];
       crossoversolutions = [];
       algorithm_status = 0;
+      oneTimeAfterEnd = 0;
 
       dumper.count++;
     }
@@ -1422,6 +1445,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                                   print("play");
                                   setState(() {
                                     algorithm_status = STATUS_IN_PROCESS;
+                                    pauseOneTime=0;
                                   });
                                 }
                               },
@@ -1520,9 +1544,32 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                     alignment: Alignment.center,
                     child: Padding(
                       padding: EdgeInsets.all(4),
-                      //Tempo total: ${printTimeFromMicroseconds(totalTime)},
-                      //de pausa: ${printTimeFromMicroseconds(currentPauseTime)},
-                      child: Text('Generations: $generation. Tempo de execução: ${printTimeFromMicroseconds(currentExecutionTime)}, média de uma geração: ${(averageExecutionTime/1000).toStringAsFixed(0)}ms', style: TextStyle(color: Colors.white, fontSize: 12),),
+                      child: Text(
+                        ((){
+                          String statustxt = '';
+                          if(algorithm_status == STATUS_IN_PROCESS){
+                            statustxt = 'Em progresso.';
+                          }if(algorithm_status == STATUS_SUCESSFULL){
+                            statustxt = 'Finalizado com sucesso.';
+                          }if(algorithm_status == STATUS_FINISHED){
+                            statustxt = 'Limite de gerações atingido';
+                          }if(algorithm_status == STATUS_PAUSE){
+                            statustxt = 'Pausado';
+                          }if(algorithm_status == STATUS_STOP){
+                            statustxt = 'Cancelado';
+                          }if(algorithm_status == STATUS_ERROR2){
+                            statustxt = 'Erro 400 - parâmetros muito limitados ou conflitantes';
+                          }if(algorithm_status == STATUS_ERROR3){
+                            statustxt = 'Erro 401 - geração nula';
+                          }
+                          //média de uma geração: ${(averageExecutionTime/1000).toStringAsFixed(0)}ms
+                          if(currentWidth > 900){
+                            return 'Geração: $generation. Tempo de execução: ${printTimeFromMicroseconds(currentExecutionTime)}, média de uma geração: ${(averageExecutionTime/1000).toStringAsFixed(0)}ms, status: $statustxt';
+                          }else{
+                            return 'Geração: $generation. Tempo de execução: ${printTimeFromMicroseconds(currentExecutionTime)}, status: $statustxt';
+                          }
+                        }()),
+                        style: TextStyle(color: Colors.white, fontSize: 12),),
                     ),
                   ),
                   const SizedBox(width: 24,)
@@ -1562,9 +1609,9 @@ class GraphDataColumn{
 }
 
 String printTimeFromMicroseconds(int time){
-  if(time < 100){
+  if(time < 1000){
     return "${time.toStringAsFixed(2)}us";
-  }else if (time < 100000){
+  }else if (time < 1000000){
     return "${(time/1000).toStringAsFixed(2)}ms";
   }
   final date = DateTime.fromMicrosecondsSinceEpoch(time);

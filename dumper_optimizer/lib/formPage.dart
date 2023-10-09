@@ -35,6 +35,7 @@ class _FormPageState extends State<FormPage> {
   double inputmax = 70; //numero padrão que um formtext tem
   late double qtd_massOp;
   late double qtd_springOp;
+  bool advancedOptionsIsVisible = false;
 
 
   void onWriting_form(Dumper _dumper, String _field, String? value){
@@ -62,6 +63,16 @@ class _FormPageState extends State<FormPage> {
             _dumper.freq_error[3] = double.parse(value);
           }else if(_field == 'freq_error[4]'){
             _dumper.freq_error[4] = double.parse(value);
+          }else if(_field == 'freq_weight[0]'){
+            _dumper.freq_weight[0] = double.parse(value);
+          }else if(_field == 'freq_weight[1]'){
+            _dumper.freq_weight[1] = double.parse(value);
+          }else if(_field == 'freq_weight[2]'){
+            _dumper.freq_weight[2] = double.parse(value);
+          }else if(_field == 'freq_weight[3]'){
+            _dumper.freq_weight[3] = double.parse(value);
+          }else if(_field == 'freq_weight[4]'){
+            _dumper.freq_weight[4] = double.parse(value);
           }else if(_field == 'width'){
             _dumper.width = double.parse(value)/1000;
           }else if(_field == 'lenght'){
@@ -72,6 +83,12 @@ class _FormPageState extends State<FormPage> {
             _dumper.springElasticity = double.parse(value)*pow(10, 6);
           }else if(_field == 'massDensity'){
             _dumper.massDensity = double.parse(value);
+          }else if(_field == 'limitGeneration'){
+            _dumper.limit_generation = int.parse(value);
+          }else if(_field == 'generationSize'){
+            _dumper.generation_size = int.parse(value);
+          }else if(_field == 'viewInterval'){
+            _dumper.view_interval = int.parse(value);
           }
           for(int i=0; i<10; i++){
             if(_field == 'springOptions[$i]'){
@@ -101,6 +118,16 @@ class _FormPageState extends State<FormPage> {
       return "*Valor inválido";
     }else if(value.isEmpty || double.parse(value) < 0 || double.parse(value) > 100){
       return "*Fora do intervalo [0, 100] %";
+    }else{
+      return null;
+    }
+  }
+
+  String? validatorFreq_weight(String? value){
+    if(value == null ) {
+      return "*Valor inválido";
+    }else if(value.isEmpty || double.parse(value) < 0.1 || double.parse(value) > 100){
+      return "*Fora do intervalo [0.1, 100] %";
     }else{
       return null;
     }
@@ -146,6 +173,36 @@ class _FormPageState extends State<FormPage> {
         return null;
       }
     }
+
+  String? validatorLimitGeneration(String? value){
+    if(value == null ) {
+      return "*Valor inválido";
+    }else if(value.isEmpty || double.parse(value) < 10 || double.parse(value) > 20000){
+      return "*Valor fora do intervalo [10, 20000] gerações";
+    }else{
+      return null;
+    }
+  }
+
+  String? validatorGenerationSize(String? value){
+    if(value == null ) {
+      return "*Valor inválido";
+    }else if(value.isEmpty || double.parse(value) < 10 || double.parse(value) > 5000){
+      return "*Valor fora do intervalo [10, 5000] indivíduos";
+    }else{
+      return null;
+    }
+  }
+
+  String? validatorViewInterval(String? value){
+    if(value == null ) {
+      return "*Valor inválido";
+    }else if(value.isEmpty || double.parse(value) < 10 || double.parse(value) > 1000){
+      return "*Valor fora do intervalo [10, 1000] indivíduos";
+    }else{
+      return null;
+    }
+  }
 
   String? validatorThickness(String? value){
     if(value == null ) {
@@ -213,9 +270,17 @@ class _FormPageState extends State<FormPage> {
         width: _width,
         child: TextFormField(
           keyboardType:const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: <TextInputFormatter>[
-            FilteringTextInputFormatter.allow(RegExp(r'^(\d+)?\.?\d{0,5}'))
-          ],
+          inputFormatters: ((){
+            if(field == 'springElasticity'){
+              return <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^(\d+)?\.?\d{0,3}'))];
+            }else if(field == 'limitGeneration' || field == 'generationSize' || field == 'viewInterval'){
+              return <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^(\d+)'))];
+            }else{
+              return <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^(\d+)?\.?\d{0,1}'))];
+            }
+            return <TextInputFormatter>[_labelText == 'Elasticidade da mola (MPa)' ? FilteringTextInputFormatter.allow(RegExp(r'^(\d+)?\.?\d{0,3}')) : FilteringTextInputFormatter.allow(RegExp(r'^(\d+)?\.?\d{0,1}'))];
+
+          }()),
           initialValue: _initialValue,
           decoration: InputDecoration(
             errorStyle: TextStyle(color: Colors.red, fontSize: errorFontSize),
@@ -275,27 +340,29 @@ class _FormPageState extends State<FormPage> {
                 shadowColor: Colors.transparent,
               ),
               onPressed: () {
-                setState(() {
-                  if(delay){
-                    return;
-                  }
-                  //formdata.data[section].length - 1 é quantos elementos tem essa seção
-                  optionsThickness.height_max == (inputmax*qtdElementos)+14 ? optionsThickness.height_max = 0 : optionsThickness.height_max = (inputmax*qtdElementos)+14;
-                  delay = true;
-                  Future.delayed(const Duration(milliseconds: 250), () { //asynchronous delay
-                    if (mounted) { //checks if widget is still active and not disposed
-                      setState(() { //tells the widget builder to rebuild again because ui has updated
-                        if(optionsThickness.visibility == false){
-                          optionsThickness.visibility = true;
-                        }
-                        delay = false;
-                      });
+                if(_formkey.currentState!.validate()){
+                  setState(() {
+                    if(delay){
+                      return;
+                    }
+                    //formdata.data[section].length - 1 é quantos elementos tem essa seção
+                    optionsThickness.height_max == (inputmax*qtdElementos)+14 ? optionsThickness.height_max = 0 : optionsThickness.height_max = (inputmax*qtdElementos)+14;
+                    delay = true;
+                    Future.delayed(const Duration(milliseconds: 250), () { //asynchronous delay
+                      if (mounted) { //checks if widget is still active and not disposed
+                        setState(() { //tells the widget builder to rebuild again because ui has updated
+                          if(optionsThickness.visibility == false){
+                            optionsThickness.visibility = true;
+                          }
+                          delay = false;
+                        });
+                      }
+                    });
+                    if(optionsThickness.visibility == true){
+                      optionsThickness.visibility = false;
                     }
                   });
-                  if(optionsThickness.visibility == true){
-                    optionsThickness.visibility = false;
-                  }
-                });
+                }
               },
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -424,7 +491,7 @@ class _FormPageState extends State<FormPage> {
                                     alignment: Alignment.centerLeft,
                                     child: Padding(
                                       padding: const EdgeInsets.only(left: 8.0, right: 8.0, bottom: 5.0),
-                                      child: Text('Objetivo de erro por frequência:', style: TextStyle(color: Colors.white, fontSize: 20),),
+                                      child: Text('Importância de cada frequência:', style: TextStyle(color: Colors.white, fontSize: 20),),
                                     ),
                                   ),
                                   Container(
@@ -433,11 +500,11 @@ class _FormPageState extends State<FormPage> {
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        formTheme(currentWidth*0.7/5.1, dumper.freq_error[0].toString(), "Freq. 1 (%)", "Exemplo: 5.0", 7.0, onWriting_form, validatorFreq_error, 'freq_error[0]'),
-                                        formTheme(currentWidth*0.7/5.1, dumper.freq_error[1].toString(), "Freq. 2 (%)", "Exemplo: 5.0", 7.0, onWriting_form, validatorFreq_error, 'freq_error[1]'),
-                                        formTheme(currentWidth*0.7/5.1, dumper.freq_error[2].toString(), "Freq. 3 (%)", "Exemplo: 5.0", 7.0, onWriting_form, validatorFreq_error, 'freq_error[2]'),
-                                        formTheme(currentWidth*0.7/5.1, dumper.freq_error[3].toString(), "Freq. 4 (%)", "Exemplo: 5.0", 7.0, onWriting_form, validatorFreq_error, 'freq_error[3]'),
-                                        formTheme(currentWidth*0.7/5.1, dumper.freq_error[4].toString(), "Freq. 5 (%)", "Exemplo: 30.0", 7.0, onWriting_form, validatorFreq_error, 'freq_error[4]'),
+                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[0].toString(), "Peso 1 (%)", "Exemplo: 2.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[0]'),
+                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[1].toString(), "Peso 2 (%)", "Exemplo: 3.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[1]'),
+                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[2].toString(), "Peso 3 (%)", "Exemplo: 4.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[2]'),
+                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[3].toString(), "Peso 4 (%)", "Exemplo: 5.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[3]'),
+                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[4].toString(), "Peso 5 (%)", "Exemplo: 1.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[4]'),
                                       ],
                                     ),
                                   ),
@@ -802,6 +869,79 @@ class _FormPageState extends State<FormPage> {
                                           ),
                                           const SizedBox(height: 75,)
                                         ],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20,),
+                                  Visibility(
+                                    visible: advancedOptionsIsVisible,
+                                    child: Column(
+                                      children: [
+                                        const Padding(
+                                          padding: EdgeInsets.only(left: 8.0, right: 8.0, bottom: 12.0),
+                                          child: Text('Configurações avançadas', style: TextStyle(color: Colors.white, fontSize: 20),),
+                                        ),
+                                        Container(
+                                          height: 70,
+                                          margin: EdgeInsets.only(left: 12, right: 12),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              formTheme(currentWidth*0.7/3.0, (dumper.limit_generation).toString(), "Limite de gerações", "Exemplo: 200", 12, onWriting_form, validatorLimitGeneration, 'limitGeneration'),
+                                              formTheme(currentWidth*0.7/3.0, (dumper.generation_size).toString(), "Tamanho da geração", "Exemplo: 250", 12, onWriting_form, validatorGenerationSize, 'generationSize'),
+                                              formTheme(currentWidth*0.7/3.0, (dumper.view_interval).toString(), "Tamanho da janela", "Exemplo: 50", 12, onWriting_form, validatorViewInterval, 'viewInterval'),
+                                            ],
+                                          ),
+                                        ),
+                                        const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(left: 8.0, right: 8.0, bottom: 5.0),
+                                            child: Text('Condição de parada (erro por frequência):', style: TextStyle(color: Colors.white, fontSize: 20),),
+                                          ),
+                                        ),
+                                        Container(
+                                          height: 70,
+                                          margin: EdgeInsets.only(left: 12, right: 12),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              formTheme(currentWidth*0.7/5.1, dumper.freq_error[0].toString(), "Freq. 1 (%)", "Exemplo: 5.0", 7.0, onWriting_form, validatorFreq_error, 'freq_error[0]'),
+                                              formTheme(currentWidth*0.7/5.1, dumper.freq_error[1].toString(), "Freq. 2 (%)", "Exemplo: 5.0", 7.0, onWriting_form, validatorFreq_error, 'freq_error[1]'),
+                                              formTheme(currentWidth*0.7/5.1, dumper.freq_error[2].toString(), "Freq. 3 (%)", "Exemplo: 5.0", 7.0, onWriting_form, validatorFreq_error, 'freq_error[2]'),
+                                              formTheme(currentWidth*0.7/5.1, dumper.freq_error[3].toString(), "Freq. 4 (%)", "Exemplo: 5.0", 7.0, onWriting_form, validatorFreq_error, 'freq_error[3]'),
+                                              formTheme(currentWidth*0.7/5.1, dumper.freq_error[4].toString(), "Freq. 5 (%)", "Exemplo: 30.0", 7.0, onWriting_form, validatorFreq_error, 'freq_error[4]'),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent,
+                                          disabledForegroundColor: Colors.transparent,
+                                          shadowColor: Colors.transparent,
+                                        ),
+                                        onPressed: () {
+                                          print("op. avançadas");
+                                          if(_formkey.currentState!.validate()){
+                                            setState(() {
+                                              advancedOptionsIsVisible = !advancedOptionsIsVisible;
+                                            });
+                                          }
+
+                                        },
+                                        child: Text(
+                                          advancedOptionsIsVisible ? 'Ver menos' : 'Configurações avançadas',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            color: Color(0xff62b5e5),
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
                                       ),
                                     ],
                                   ),

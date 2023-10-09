@@ -62,7 +62,7 @@ List<Object> select_thickness(List<double> vector_mm){
     answer += vector_mm[choice]/1000;
     formation_mm.add(vector_mm[choice]);
   }
-  answer = double.parse(answer.toStringAsFixed(6)); //removing bug of the accuracy
+  answer = double.parse(answer.toStringAsFixed(6)); //removing bug of the accuracy (1.234mm == 0.00123)
   var final_answer = [answer, formation_mm];
   return final_answer;
 }
@@ -132,7 +132,7 @@ List<Object> fitness(List<List<double>> aco, List<List<double>> rigidez, List<do
   for(int i=0 ;i<ans.length; i++){
     vector_error[i] = vector_error[i].abs();
   }
-  List<double> weight = [2, 3, 4, 5, 1];
+  List<double> weight = arg.freq_weight;
   error = (vector_error[0]*weight[0] + vector_error[1]*weight[1] + vector_error[2]*weight[2] + vector_error[3]*weight[3] + vector_error[4]*weight[4])/weight.sum();
   if (error == 0) {
     return [pow(10.0, 10) as double,[0.0, 0.0, 0.0, 0.0, 0.0] , [1.0, 1.0, 1.0, 1.0, 1.0]];

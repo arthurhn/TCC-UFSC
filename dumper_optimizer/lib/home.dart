@@ -82,6 +82,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
   bool darkMode = true;
   bool useSides = true;
   int pauseOneTime = 0;
+  bool showAlertDialog = false;
+  StreamController<bool> _streamController = StreamController<bool>.broadcast();
 
   @override
   void initState(){
@@ -89,6 +91,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
     tabController=TabController(length: 3, vsync: this);
     //obs: se colocar setState enquanto esta no pause ele n consegue ver oca
     _timer = Timer.periodic(const Duration(milliseconds: 40), (timer) {
+      if((algorithm_status == STATUS_ERROR2 || algorithm_status == STATUS_ERROR3) && !showAlertDialog){
+        print("Error 400 ou 401");
+        showAlertDialog = true;
+        _showCustomAlertDialog();
+      }
       if(algorithm_status == STATUS_PAUSE){
         currentPauseTime = totalTime-currentExecutionTime;
       }
@@ -113,13 +120,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
           oneTimeAfterEnd++;
         });
       }
-      if(tabController.index == 2 && pauseOneTime == 0){
-        setState(() {
-          print("setState");
-          pauseOneTime++;
-          algorithm_status = STATUS_PAUSE;
-        });
-      }
+      //para quando clica na aba resultados
+      // if(tabController.index == 2 && pauseOneTime == 0){
+      //   setState(() {
+      //     print("setState");
+      //     pauseOneTime++;
+      //     algorithm_status = STATUS_PAUSE;
+      //   });
+      // }
 
       //inicio do algoritmo genetico
       //condição de parada, seja: o botão de parada, algum erro, seja ele por limite de tempo
@@ -213,7 +221,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
       }
 
 
+
     });
+
+
+
   }
 
   TooltipBehavior _tooltipBehavior(String headerText) {
@@ -284,6 +296,57 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
     );
   }
 
+  void _showCustomAlertDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.black,
+          shape: const RoundedRectangleBorder(
+              borderRadius:  BorderRadius.all(
+                Radius.circular(10.0),
+              ),
+              side: BorderSide(
+                  width: 3,
+                  color: Color(0xffff0000)
+              )
+          ),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline, // Ícone de erro
+                color: Colors.red,
+                size: 40,
+              ),
+              SizedBox(width: 10), // Espaçamento entre o ícone e o texto
+              Text(
+                'Erro 400',
+                style: TextStyle(fontSize: 20, color: Colors.white),
+              ),
+            ],
+          ),
+          content: Text('Parâmetros muito limitados ou conflitantes.', style: TextStyle(color: Colors.white),),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Fechar o AlertDialog
+              },
+              child: Text('OK'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Fechar o AlertDialog
+                Navigator.of(context).pop(); // Voltar para a tela anterior
+              },
+              child: Text('Voltar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget SelectChart(String select, double current_width, double current_height, bool isCorner, [int individualPosition=0]){
     if(select == 'accuracy'){
        return Container(
@@ -307,7 +370,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
              enablePinching: true,
            ) :  null,
            primaryXAxis: NumericAxis(
-             interval: 50,
+             interval: ((){
+               if(generation < 10){
+                 return 2.0;
+               }else if(generation < 50){
+                 return 5.0;
+               }else if(generation < 100){
+                 return 10.0;
+               }else if(generation < 200){
+                 return 25.0;
+               }else{
+                 return 50.0;
+               }
+             }()),
              decimalPlaces: 0,
              title: !isCorner ? AxisTitle(
                  text: 'Geração',
@@ -368,7 +443,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
             enablePinching: true,
           ) :  null,
           primaryXAxis: NumericAxis(
-            interval: 50,
+            interval: ((){
+              if(generation < 10){
+                return 2.0;
+              }else if(generation < 50){
+                return 5.0;
+              }else if(generation < 100){
+                return 10.0;
+              }else if(generation < 200){
+                return 25.0;
+              }else{
+                return 50.0;
+              }
+            }()),
             decimalPlaces: 0,
             title: !isCorner ? AxisTitle(
                 text: 'Geração',
@@ -467,23 +554,43 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
         ),
       );
     }else if (select == 'errors_by_freq_radar'){
-      const ticks = [10, 20, 30, 40, 50];
+      List<int> ticks = [0, 10, 20, 30, 40, 50];
+      double maxErrorFromBestFive = 0;
       List<String> features = ["Freq. 1", "Freq. 2", "Freq. 3", "Freq. 4", "Freq. 5",];
       for(int i=0; i<dumper.freq.length; i++){
         features[i] = "${dumper.freq[i]} Hz";
       }
       List<List<double>> data = [];
-      if(rankedsolutions.length >= 5){
+      if(rankedsolutions.isNotEmpty) {
+        maxErrorFromBestFive = (rankedsolutions[0].vector_errors[0] * 100);
         data.add([]);
-        for(int j=0; j<5; j++){
-          if(rankedsolutions[individualPosition].vector_errors[j]*100 > 50){
-            data[0].add(50);
-          }else{
-            data[0].add(double.parse((rankedsolutions[individualPosition].vector_errors[j]*100).toStringAsFixed(2)));
+        for (int j = 0; j < 5; j++) {
+          data[0].add(double.parse(
+              (rankedsolutions[individualPosition].vector_errors[j] * 100)
+                  .toStringAsFixed(2)));
+          if (rankedsolutions[individualPosition].vector_errors[j] * 100 >
+              maxErrorFromBestFive) {
+            maxErrorFromBestFive =
+                rankedsolutions[individualPosition].vector_errors[j] * 100;
           }
         }
-
+        if (maxErrorFromBestFive < 5) {
+          ticks = [0, 1, 2, 3, 4, 5];
+        } else if (maxErrorFromBestFive < 10) {
+          ticks = [0, 5, 10];
+        } else if (maxErrorFromBestFive < 20) {
+          ticks = [0, 5, 10, 15, 20];
+        } else if (maxErrorFromBestFive < 30) {
+          ticks = [0, 10, 20, 30];
+        } else if (maxErrorFromBestFive < 40) {
+          ticks = [0, 20, 40];
+        } else if (maxErrorFromBestFive < 50) {
+          ticks = [0, 10, 30, 50];
+        } else{
+          ticks = [0, 25, 50, 75, 100];
+        }
       }
+
       return Column(
         children: [
           const Text(
@@ -645,6 +752,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
           child: Column(
             children: [
               SizedBox(height: 20,),
+              StreamBuilder<bool>(
+                stream: _streamController.stream,
+                builder: (context, snapshot) {
+                  if (snapshot.hasData && snapshot.data == true) {
+                    return AlertDialog(
+                      title: Text('Título do Alerta'),
+                      content: Text('Conteúdo do Alerta'),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () {
+                            _streamController.add(false); // Fechar o AlertDialog
+                          },
+                          child: Text('Fechar'),
+                        ),
+                      ],
+                    );
+                  } else {
+                    return Container(); // Oculta o AlertDialog
+                  }
+                },
+              ),
               SelectChart(select_chart, current_width, current_height, false),
               SizedBox(height: 10,),
               Container(
@@ -731,11 +859,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                             SizedBox(height: 10,),
                             Text(dumper.freq.isEmpty ? 'Vazio' : 'Objetivos (Frequências):\n[${dumper.freq[0].toStringAsFixed(0)}, ${dumper.freq[1].toStringAsFixed(0)}, ${dumper.freq[2].toStringAsFixed(0)}, ${dumper.freq[3].toStringAsFixed(0)}, ${dumper.freq[4].toStringAsFixed(0)}] Hz', style: TextStyle(color: Colors.white),),
                             SizedBox(height: 3,),
-                            Text(dumper.freq_error.isEmpty ? 'Vazio' : 'Peso das frequências: \n(Mudar aqui)', style: TextStyle(color: Colors.white),),
+                            Text(dumper.freq_weight.isEmpty ? 'Vazio' : 'Peso das Frequências:\n[${dumper.freq_weight[0].toStringAsFixed(0)}, ${dumper.freq_weight[1].toStringAsFixed(0)}, ${dumper.freq_weight[2].toStringAsFixed(0)}, ${dumper.freq_weight[3].toStringAsFixed(0)}, ${dumper.freq_weight[4].toStringAsFixed(0)}]', style: TextStyle(color: Colors.white),),
+                            SizedBox(height: 3,),
+                            Text(dumper.freq_weight.isEmpty ? 'Vazio' : 'Condição de parada (Erro):\n[${dumper.freq_error[0].toStringAsFixed(0)}, ${dumper.freq_error[1].toStringAsFixed(0)}, ${dumper.freq_error[2].toStringAsFixed(0)}, ${dumper.freq_error[3].toStringAsFixed(0)}, ${dumper.freq_error[4].toStringAsFixed(0)}]%', style: TextStyle(color: Colors.white),),
                             SizedBox(height: 3,),
                             Text('Largura: ${(dumper.width*1000).toStringAsFixed(1)} mm', style: TextStyle(color: Colors.white),),
                             SizedBox(height: 3,),
-                            Text('Comprimento: ${(dumper.lenght*100).toStringAsFixed(1)} cm', style: TextStyle(color: Colors.white),),
+                            Text('Comprimento: ${(dumper.lenght*1000).toStringAsFixed(1)} mm', style: TextStyle(color: Colors.white),),
                             SizedBox(height: 3,),
                             Text('Intervalo de Peso: [${(dumper.min_weight).toStringAsFixed(1)}, ${(dumper.max_weight).toStringAsFixed(1)}] Kg', style: TextStyle(color: Colors.white),),
                             SizedBox(height: 3,),
@@ -1095,16 +1225,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                               Text(rankedsolutions.isEmpty ? 'Vazio' : 'Frequência obtida:     [${(rankedsolutions[individual_select].vector_ans[0]).toStringAsFixed(1)}, ${(rankedsolutions[individual_select].vector_ans[1]).toStringAsFixed(1)}, ${(rankedsolutions[individual_select].vector_ans[2]).toStringAsFixed(1)}, ${(rankedsolutions[individual_select].vector_ans[3]).toStringAsFixed(1)}, ${(rankedsolutions[individual_select].vector_ans[4]).toStringAsFixed(1)}] Hz', style: TextStyle(color: Colors.white),),
                               Text(rankedsolutions.isEmpty ? 'Vazio' : 'Erro por frequência:   [${(rankedsolutions[individual_select].vector_errors[0]*100).toStringAsFixed(1)}, ${(rankedsolutions[individual_select].vector_errors[1]*100).toStringAsFixed(1)}, ${(rankedsolutions[individual_select].vector_errors[2]*100).toStringAsFixed(1)}, ${(rankedsolutions[individual_select].vector_errors[3]*100).toStringAsFixed(1)}, ${(rankedsolutions[individual_select].vector_errors[4]*100).toStringAsFixed(1)}] %', style: TextStyle(color: Colors.white),),
                               Text(rankedsolutions.isEmpty ? 'Vazio' : 'Erro médio: ${((rankedsolutions[individual_select].vector_errors.sum()/5)*100).toStringAsFixed(2)}%', style: TextStyle(color: Colors.white),),
-                              Text('Largura: ${(dumper.lenght*100).toStringAsFixed(1)} mm', style: TextStyle(color: Colors.white),),
-                              Text('Comprimento: ${(dumper.width*1000).toStringAsFixed(1)} cm', style: TextStyle(color: Colors.white),),
+                              Text('Largura: ${(dumper.width*1000).toStringAsFixed(1)} mm', style: TextStyle(color: Colors.white),),
+                              Text('Comprimento: ${(dumper.lenght*1000).toStringAsFixed(1)} mm', style: TextStyle(color: Colors.white),),
                             ],
                           ),
                         ],
                       ),
-                      Container(
-                        width: 350,
-                        height: 200,
-                        child: SelectChart('errors_by_freq_radar', current_width, current_height, false, individual_select)
+                      Visibility(
+                        visible: current_width < 1000 ? false : true,
+                        child: Container(
+                          width: 350,
+                          height: 200,
+                          child: SelectChart('errors_by_freq_radar', current_width, current_height, false, individual_select)
+                        ),
                       ),
                     ],
                   ),
@@ -1113,7 +1246,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
               Expanded(
                 flex: 47,
                 child: Container(
-                  width: 560,
+                  width: current_width < 1000 ? 560 : 700,
                   height: 250,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1150,9 +1283,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                             ),
                           ),
                           SizedOverflowBox(
-                            size: Size(440, 100),
+                            size: current_width < 1000 ? Size(355, 100) : Size(430, 100),
                             child: Container(
-                              width: 455,
+                              width: current_width < 1000 ? 380 : 450,
                               height: 110,
                               child: SfCartesianChart(
                                   margin: EdgeInsets.all(0),
@@ -1352,6 +1485,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
       );
     }
 
+
+
+
     return Scaffold(
       body:
       Container(
@@ -1413,7 +1549,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                         isScrollable: true,
                         labelPadding: const EdgeInsets.symmetric(horizontal: 30),
                         tabs: const [
-                          Tab(child: SizedBox(width: 80, child: Center(child: Text("Principal", style: TextStyle(color: Color(0xff62b5e5),),))),),
+                          Tab(child: SizedBox(width: 80, child: Center(child: Text("Solver", style: TextStyle(color: Color(0xff62b5e5),),))),),
                           Tab(child: SizedBox(width: 80, child: Center(child: Text("Visão Geral", style: TextStyle(color: Color(0xff62b5e5),),))),),
                           Tab(child: SizedBox(width: 80, child: Center(child: Text("Resultados", style: TextStyle(color: Color(0xff62b5e5),),))),),
                         ],
@@ -1576,6 +1712,38 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin{
                 ],
               )
             ],),
+            // AlertDialog(
+            //   backgroundColor: Colors.black,
+            //   shape: const RoundedRectangleBorder(
+            //       borderRadius:  BorderRadius.all(
+            //         Radius.circular(10.0),
+            //       ),
+            //       side: BorderSide(
+            //           width: 3,
+            //           color: Color(0xffff0000)
+            //       )
+            //   ),
+            //   title: const Text(
+            //     'Falha na exportação dos dados',
+            //     style: TextStyle(
+            //       color: Colors.white,
+            //     ),
+            //   ),
+            //   content: const Text(
+            //     'Verifique as permissões do aplicativo',
+            //     style: TextStyle(
+            //       fontSize: 14,
+            //       color: Color(0xffffffff),
+            //     ),
+            //     textAlign: TextAlign.center,
+            //   ),
+            //   actions: [
+            //     TextButton(
+            //         child: const Text('Ok', style: TextStyle(color: Colors.white)),
+            //         onPressed: () => Navigator.pop(context)
+            //     )
+            //   ],
+            // ),
           ]
         ),
       )

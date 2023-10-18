@@ -31,7 +31,7 @@ class _FormPageState extends State<FormPage> {
   @override
   bool delay = false;//serve verificar se a animação das seções esta ocorrendo, caso sim, o conteúdo da seção permanece escondido para não dar overflow
   AnimationSection springOptionsThickness = AnimationSection(0.0, false, 'Opções de mola');
-  AnimationSection massOptionsThickness = AnimationSection(0.0, false, 'Opções de material');
+  AnimationSection massOptionsThickness = AnimationSection(0.0, false, 'Opções de aço');
   double inputmax = 70; //numero padrão que um formtext tem
   late double qtd_massOp;
   late double qtd_springOp;
@@ -76,7 +76,7 @@ class _FormPageState extends State<FormPage> {
           }else if(_field == 'width'){
             _dumper.width = double.parse(value)/1000;
           }else if(_field == 'lenght'){
-            _dumper.lenght = double.parse(value)/100;
+            _dumper.lenght = double.parse(value)/1000;
           }else if(_field == 'springDensity'){
             _dumper.springDensity = double.parse(value);
           }else if(_field == 'springElasticity'){
@@ -146,8 +146,8 @@ class _FormPageState extends State<FormPage> {
   String? validatorLenght(String? value)  {
     if(value == null ) {
       return "*Valor inválido";
-    }else if(value.isEmpty || double.parse(value) < 40 || double.parse(value) > 60){
-      return "*Valor fora do intervalo [40, 60] cm";
+    }else if(value.isEmpty || double.parse(value) < 400 || double.parse(value) > 600){
+      return "*Valor fora do intervalo [400, 6000] mm";
     }else{
       return null;
     }
@@ -187,8 +187,8 @@ class _FormPageState extends State<FormPage> {
   String? validatorGenerationSize(String? value){
     if(value == null ) {
       return "*Valor inválido";
-    }else if(value.isEmpty || double.parse(value) < 10 || double.parse(value) > 5000){
-      return "*Valor fora do intervalo [10, 5000] indivíduos";
+    }else if(value.isEmpty || double.parse(value) < 10 || double.parse(value) > 2000){
+      return "*Valor fora do intervalo [10, 2000] indivíduos";
     }else{
       return null;
     }
@@ -370,7 +370,7 @@ class _FormPageState extends State<FormPage> {
                   Container(
                     margin: const EdgeInsets.only(left: 8),
                     child: Text(
-                      springOptionsThickness.label,
+                      optionsThickness.label,
                       style: const TextStyle(
                         fontSize: 10.5,
                         color: Color(0xffffffff),
@@ -380,7 +380,7 @@ class _FormPageState extends State<FormPage> {
                   ),
                   Container(
                       margin: const EdgeInsets.only(right: 4),
-                      child: springOptionsThickness.height_max == 0 ? const Icon(Icons.arrow_drop_down_circle_outlined) : Transform.rotate(angle: 3.1415, child: const Icon(Icons.arrow_drop_down_circle_outlined),
+                      child: optionsThickness.height_max == 0 ? const Icon(Icons.arrow_drop_down_circle_outlined) : Transform.rotate(angle: 3.1415, child: const Icon(Icons.arrow_drop_down_circle_outlined),
                       )),
                 ],
               ),
@@ -500,11 +500,11 @@ class _FormPageState extends State<FormPage> {
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[0].toString(), "Peso 1 (%)", "Exemplo: 2.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[0]'),
-                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[1].toString(), "Peso 2 (%)", "Exemplo: 3.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[1]'),
-                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[2].toString(), "Peso 3 (%)", "Exemplo: 4.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[2]'),
-                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[3].toString(), "Peso 4 (%)", "Exemplo: 5.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[3]'),
-                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[4].toString(), "Peso 5 (%)", "Exemplo: 1.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[4]'),
+                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[0].toString(), "Peso 1", "Exemplo: 2.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[0]'),
+                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[1].toString(), "Peso 2", "Exemplo: 3.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[1]'),
+                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[2].toString(), "Peso 3", "Exemplo: 4.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[2]'),
+                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[3].toString(), "Peso 4", "Exemplo: 5.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[3]'),
+                                        formTheme(currentWidth*0.7/5.1, dumper.freq_weight[4].toString(), "Peso 5", "Exemplo: 1.0", 7.0, onWriting_form, validatorFreq_weight, 'freq_weight[4]'),
                                       ],
                                     ),
                                   ),
@@ -522,7 +522,7 @@ class _FormPageState extends State<FormPage> {
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           formTheme(currentWidth*0.7/2, (dumper.width*1000).toString(), "Largura (mm)", "Exemplo: 50.0", 12.0, onWriting_form, validatorWidth, 'width'),
-                                          formTheme(currentWidth*0.7/2, (dumper.lenght*100).toString(), "Comprimento (cm)", "Exemplo: 49.0", 12.0, onWriting_form, validatorLenght, 'lenght'),
+                                          formTheme(currentWidth*0.7/2, (dumper.lenght*1000).toString(), "Comprimento (mm)", "Exemplo: 490.0", 12.0, onWriting_form, validatorLenght, 'lenght'),
                                         ]
                                     ),
                                   ),
@@ -589,7 +589,7 @@ class _FormPageState extends State<FormPage> {
                                                   padding: const EdgeInsets.only(left: 12.0, right: 8.0),
                                                   child: RichText(
                                                     text: TextSpan(
-                                                      text: 'Espessura de mola aceita (mm): ',
+                                                      text: 'Espessura da borracha aceita (mm): ',
                                                       style: TextStyle(color: Colors.white, fontSize: 15),
                                                       children: <TextSpan>[
                                                         TextSpan(text: '[${NumberFormat("#.0").format(double.parse((_rangeSlider_spring_thickness.start).toStringAsFixed(2)))}, ${NumberFormat("#.0").format(double.parse((_rangeSlider_spring_thickness.end).toStringAsFixed(2)))}]', style: TextStyle(color: Colors.white38, fontSize: 15),),
@@ -649,7 +649,7 @@ class _FormPageState extends State<FormPage> {
                                                           padding: const EdgeInsets.only(left: 12.0, right: 2.0),
                                                           child: RichText(
                                                             text: TextSpan(
-                                                              text: 'Qtd. opções: ',
+                                                              text: 'Qtd. espessuras: ',
                                                               style: TextStyle(color: Colors.white, fontSize: 12),
                                                               children: <TextSpan>[
                                                                 TextSpan(text: NumberFormat("#").format(double.parse((qtd_springOp_aux).toString())), style: TextStyle(color: Colors.white60, fontSize: 12),),
@@ -710,12 +710,12 @@ class _FormPageState extends State<FormPage> {
                                           Container(
                                             margin: const EdgeInsets.only(left: 12, right: 12),
                                             height: 70,
-                                            child: formTheme(currentWidth*0.7/2.4, dumper.springDensity.toString(), "Densidade da mola (Kg/m^3)", "Exemplo: 1300.0", 8.5, onWriting_form, validatorDensity, 'springDensity'),
+                                            child: formTheme(currentWidth*0.7/2.4, dumper.springDensity.toString(), "Densidade da borracha (Kg/m^3)", "Exemplo: 1300.0", 8.5, onWriting_form, validatorDensity, 'springDensity'),
                                           ),
                                           Container(
                                             margin: const EdgeInsets.only(top: 5, left: 12, right: 12),
                                             height: 70,
-                                            child: formTheme(currentWidth*0.7/2.4, (dumper.springElasticity/pow(10, 6)).toString(), "Elasticidade da mola (MPa)", "Exemplo: 3.5", 8.5, onWriting_form, validatorElasticity, 'springElasticity'),
+                                            child: formTheme(currentWidth*0.7/2.4, (dumper.springElasticity/pow(10, 6)).toString(), "Elasticidade da borracha (MPa)", "Exemplo: 3.5", 8.5, onWriting_form, validatorElasticity, 'springElasticity'),
                                           ),
                                         ],
                                       ),
@@ -744,7 +744,7 @@ class _FormPageState extends State<FormPage> {
                                                   padding: const EdgeInsets.only(left: 12.0, right: 8.0),
                                                   child: RichText(
                                                     text: TextSpan(
-                                                      text: 'Espessura da massa aceita (mm): ',
+                                                      text: 'Espessura do aço aceita (mm): ',
                                                       style: TextStyle(color: Colors.white, fontSize: 15),
                                                       children: <TextSpan>[
                                                         TextSpan(text: '[${NumberFormat("#.0").format(double.parse((_rangeSlider_mass_thickness.start).toStringAsFixed(2)))}, ${NumberFormat("#.0").format(double.parse((_rangeSlider_mass_thickness.end).toStringAsFixed(2)))}]', style: TextStyle(color: Colors.white38, fontSize: 15),),
@@ -804,7 +804,7 @@ class _FormPageState extends State<FormPage> {
                                                           padding: const EdgeInsets.only(left: 12.0, right: 2.0),
                                                           child: RichText(
                                                             text: TextSpan(
-                                                              text: 'Qtd. opções: ',
+                                                              text: 'Qtd. espessuras: ',
                                                               style: TextStyle(color: Colors.white, fontSize: 12),
                                                               children: <TextSpan>[
                                                                 TextSpan(text: NumberFormat("#").format(double.parse((qtd_massOp_aux).toString())), style: TextStyle(color: Colors.white60, fontSize: 12),),
@@ -865,7 +865,7 @@ class _FormPageState extends State<FormPage> {
                                           Container(
                                             margin: const EdgeInsets.only(left: 12, right: 12),
                                             height: 70,
-                                            child: formTheme(currentWidth*0.7/2.4, dumper.massDensity.toString(), "Densidade do material (Kg/m^3)", "Exemplo: 7800.0", 8.5, onWriting_form, validatorDensity, 'massDensity'),
+                                            child: formTheme(currentWidth*0.7/2.4, dumper.massDensity.toString(), "Densidade do aço (Kg/m^3)", "Exemplo: 7800.0", 8.5, onWriting_form, validatorDensity, 'massDensity'),
                                           ),
                                           const SizedBox(height: 75,)
                                         ],
@@ -888,7 +888,7 @@ class _FormPageState extends State<FormPage> {
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
                                               formTheme(currentWidth*0.7/3.0, (dumper.limit_generation).toString(), "Limite de gerações", "Exemplo: 200", 12, onWriting_form, validatorLimitGeneration, 'limitGeneration'),
-                                              formTheme(currentWidth*0.7/3.0, (dumper.generation_size).toString(), "Tamanho da geração", "Exemplo: 250", 12, onWriting_form, validatorGenerationSize, 'generationSize'),
+                                              formTheme(currentWidth*0.7/3.0, (dumper.generation_size).toString(), "Tamanho da população", "Exemplo: 250", 12, onWriting_form, validatorGenerationSize, 'generationSize'),
                                               formTheme(currentWidth*0.7/3.0, (dumper.view_interval).toString(), "Tamanho da janela", "Exemplo: 50", 12, onWriting_form, validatorViewInterval, 'viewInterval'),
                                             ],
                                           ),
@@ -897,7 +897,7 @@ class _FormPageState extends State<FormPage> {
                                           alignment: Alignment.centerLeft,
                                           child: Padding(
                                             padding: const EdgeInsets.only(left: 8.0, right: 8.0, bottom: 5.0),
-                                            child: Text('Condição de parada (erro por frequência):', style: TextStyle(color: Colors.white, fontSize: 20),),
+                                            child: Text('Condição de parada: Erro em % por frequência:', style: TextStyle(color: Colors.white, fontSize: 20),),
                                           ),
                                         ),
                                         Container(
